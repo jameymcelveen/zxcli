@@ -21,6 +21,7 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version: stable
+          cache: false
       - run: sudo apt-get update && sudo apt-get install -y nsis
       - run: make check
       - run: make archives linux-packages windows-installer VERSION="$VERSION"
@@ -34,28 +35,6 @@ jobs:
             dist/*.deb
             dist/*.rpm
             dist/*_setup.exe
-
-  macos:
-    name: build and test the macOS pkg
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
-        with:
-          go-version: stable
-      - run: make pkg VERSION="$VERSION"
-      - name: Install the pkg and run zx
-        run: |
-          sudo installer -pkg dist/zx_darwin_universal.pkg -target /
-          cd /tmp
-          zx version
-          zx version | grep -F "$VERSION"
-          zx guid
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dist-macos
-          if-no-files-found: error
-          path: dist/*.pkg
 
   test-linux:
     name: test the deb
@@ -98,7 +77,7 @@ jobs:
 
   release:
     name: publish the release
-    needs: [build, macos, test-linux, test-windows]
+    needs: [build, test-linux, test-windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -112,7 +91,33 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$VERSION" --title "zx $VERSION" --generate-notes \
-            dist/*.tar.gz dist/*.zip dist/*.deb dist/*.rpm dist/*.pkg dist/*_setup.exe dist/checksums.txt
+            dist/*.tar.gz dist/*.zip dist/*.deb dist/*.rpm dist/*_setup.exe dist/checksums.txt
+
+  # GitHub's macOS machines are often short on capacity, so the pkg is built
+  # after the release is out and attached to it. If this job never gets a
+  # machine, run "make upload-pkg VERSION=<tag>" on any Mac instead.
+  macos:
+    name: build, test and attach the macOS pkg
+    needs: release
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: stable
+          cache: false
+      - run: make pkg VERSION="$VERSION"
+      - name: Install the pkg and run zx
+        run: |
+          sudo installer -pkg dist/zx_darwin_universal.pkg -target /
+          cd /tmp
+          zx version
+          zx version | grep -F "$VERSION"
+          zx guid
+      - name: Attach the pkg to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: make upload-pkg VERSION="$VERSION"
 
   test-install-scripts:
     name: test install scripts (${{ matrix.os }})

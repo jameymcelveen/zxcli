@@ -21,7 +21,7 @@ print-version: ## Show the version numbers the build will use
 	@echo "$(VERSION) -> package version $(PKG_VERSION)"
 
 .PHONY: print-version help build run test cover fmt lint check install uninstall new \
-        dist archives linux-packages pkg windows-installer installers checksums clean
+        dist archives linux-packages pkg upload-pkg windows-installer installers checksums clean
 
 help: ## Show this list
 	@awk 'BEGIN {FS = ":.*## "} /^[a-z-]+:.*## / {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -104,6 +104,11 @@ pkg: dist ## macOS .pkg installer, universal binary (macOS only)
 		$(DIST)/$(BIN)_darwin_amd64/$(BIN) $(DIST)/$(BIN)_darwin_arm64/$(BIN)
 	pkgbuild --root $(DIST)/pkgroot --identifier com.jameymcelveen.zx \
 		--version $(PKG_VERSION) --install-location / $(DIST)/$(BIN)_darwin_universal.pkg
+
+upload-pkg: pkg ## Attach the macOS .pkg to a GitHub release: make upload-pkg VERSION=v0.1.0
+	cd $(DIST) && gh release download $(VERSION) --pattern checksums.txt --clobber
+	cd $(DIST) && { grep -v '$(BIN)_darwin_universal.pkg' checksums.txt; shasum -a 256 $(BIN)_darwin_universal.pkg; } > checksums.tmp && mv checksums.tmp checksums.txt
+	gh release upload $(VERSION) $(DIST)/$(BIN)_darwin_universal.pkg $(DIST)/checksums.txt --clobber
 
 windows-installer: dist ## Windows setup .exe (needs makensis)
 	@command -v makensis >/dev/null || { echo "makensis not found. macOS: brew install makensis. Ubuntu: apt-get install nsis"; exit 1; }

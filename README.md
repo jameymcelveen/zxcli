@@ -164,7 +164,7 @@ $ make installers # every archive and installer this machine can build, into dis
 | `zxcli.json` | the built-in command registry |
 | `packaging/`, `scripts/` | installers and install scripts |
 
-To release, push a tag: `git tag v0.2.0 && git push origin v0.2.0`. GitHub Actions builds every installer, installs each one on a real Linux, macOS and Windows machine, runs `zx`, and only then publishes the release.
+To release, push a tag: `git tag v0.2.0 && git push origin v0.2.0`. GitHub Actions builds every installer, installs each one on a real Linux, macOS and Windows machine, runs `zx`, and only then publishes the release. The macOS `.pkg` is built, test-installed and attached by a follow-up job. If GitHub has no macOS machine free, run `make upload-pkg VERSION=v0.2.0` on a Mac.
 
 ## License
 
