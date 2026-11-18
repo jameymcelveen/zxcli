@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 )
 
 // ProjectFile is the per-project config file zx looks for in the current
@@ -20,6 +21,7 @@ type Script struct {
 	Name    string `json:"name"`
 	Summary string `json:"summary,omitempty"`
 	Run     string `json:"run"`
+	Global  bool   `json:"global,omitempty"` // also runnable without the "zx" prefix
 
 	Dir    string `json:"-"` // working directory; empty means the current one
 	Source string `json:"-"` // file the script was defined in
@@ -34,11 +36,11 @@ func (s Script) describe() string {
 
 // configFile is the on-disk shape of a user or project config.
 type configFile struct {
-	Aliases  map[string]string `json:"aliases"`
-	Commands []Script          `json:"commands"`
-	Disabled []string          `json:"disabled"`
-	Settings map[string]string `json:"settings"`
-	Doctor   []DoctorCheck     `json:"doctor"`
+	Aliases  map[string]aliasValue `json:"aliases"`
+	Commands []Script              `json:"commands"`
+	Disabled []string              `json:"disabled"`
+	Settings map[string]string     `json:"settings"`
+	Doctor   []DoctorCheck         `json:"doctor"`
 }
 
 // Config is the merged user and project configuration.
@@ -50,8 +52,9 @@ type Config struct {
 	ProjectDoctor []DoctorCheck     // "doctor" list from the project config
 	User          []Script
 	Project       []Script
-	UserPath      string // where the user config lives (it may not exist yet)
-	ProjectPath   string // empty when no .zx.json was found
+	Global        map[string]bool // aliases and commands marked "global": true in the user config
+	UserPath      string          // where the user config lives (it may not exist yet)
+	ProjectPath   string          // empty when no .zx.json was found
 }
 
 // Setting returns a value from the "settings" block, or def when it is unset.
@@ -116,7 +119,7 @@ var scriptName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.:-]*$`)
 // LoadConfig reads the user config and the nearest project config. Problems
 // are returned as warnings so a broken config never locks the user out.
 func LoadConfig(cwd string) (Config, []string) {
-	cfg := Config{Aliases: map[string]string{}, Disabled: map[string]bool{}, Settings: map[string]string{}, UserPath: UserConfigPath()}
+	cfg := Config{Aliases: map[string]string{}, Disabled: map[string]bool{}, Settings: map[string]string{}, Global: map[string]bool{}, UserPath: UserConfigPath()}
 	var warnings []string
 
 	load := func(path string, project bool) {
@@ -133,7 +136,18 @@ func LoadConfig(cwd string) (Config, []string) {
 			return
 		}
 		for k, v := range f.Aliases {
-			cfg.Aliases[k] = v
+			if !scriptName.MatchString(k) || strings.TrimSpace(v.Run) == "" {
+				warnings = append(warnings, fmt.Sprintf("%s: skipping alias %q: it needs a simple name and a command", path, k))
+				continue
+			}
+			cfg.Aliases[k] = v.Run
+			delete(cfg.Global, k)
+			switch {
+			case v.Global && project:
+				warnings = append(warnings, fmt.Sprintf("%s: alias %q can't be global: only your own config can add machine-wide commands", path, k))
+			case v.Global:
+				cfg.Global[k] = true
+			}
 		}
 		for _, d := range f.Disabled {
 			cfg.Disabled[d] = true
@@ -163,6 +177,13 @@ func LoadConfig(cwd string) (Config, []string) {
 				continue
 			}
 			s.Source = path
+			switch {
+			case s.Global && project:
+				warnings = append(warnings, fmt.Sprintf("%s: command %q can't be global: only your own config can add machine-wide commands", path, s.Name))
+				s.Global = false
+			case s.Global:
+				cfg.Global[s.Name] = true
+			}
 			if project {
 				s.Dir = filepath.Dir(path)
 				cfg.Project = append(cfg.Project, s)
@@ -324,6 +345,39 @@ func (o OSCommands) For(goos string) string {
 		if v := o[k]; v != "" {
 			return v
 		}
+	}
+	return ""
+}
+
+// aliasValue is an alias as written in config: either the command it stands
+// for ("guid --copy"), or an object that can also mark it global:
+// {"run": "doctor --fix", "global": true}.
+type aliasValue struct {
+	Run    string `json:"run"`
+	Global bool   `json:"global"`
+}
+
+func (a *aliasValue) UnmarshalJSON(b []byte) error {
+	var run string
+	if json.Unmarshal(b, &run) == nil {
+		*a = aliasValue{Run: run}
+		return nil
+	}
+	type plain aliasValue
+	if err := json.Unmarshal(b, (*plain)(a)); err != nil {
+		return errors.New("an alias must be a command, or an object like {\"run\": \"doctor --fix\", \"global\": true}")
+	}
+	return nil
+}
+
+// GlobalDir is where the launchers for global commands live: $ZX_BIN, or a
+// "bin" folder beside the user config.
+func GlobalDir() string {
+	if d := os.Getenv("ZX_BIN"); d != "" {
+		return d
+	}
+	if p := UserConfigPath(); p != "" {
+		return filepath.Join(filepath.Dir(p), "bin")
 	}
 	return ""
 }

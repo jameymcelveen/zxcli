@@ -64,6 +64,7 @@ The installers are not code-signed. macOS asks you to confirm the `.pkg` (right-
 | `zx serve` | Serve a folder over HTTP: `zx serve ./dist -p 3000` |
 | `zx clip`, `zx paste` | The clipboard as a pipe, the same on every OS: `zx paste \| zx json \| zx clip` |
 | `zx upgrade` | Update zx to the latest release, verified against its checksums |
+| `zx global` | Make your aliases and commands runnable without the `zx` prefix |
 | `zx config` | Show, create (`init`) or edit your config |
 | `zx completion` | Shell completion for bash, zsh, fish and PowerShell |
 
@@ -95,6 +96,26 @@ Run `zx config init` to create `~/.config/zx/zxcli.json` (`%AppData%\zx\zxcli.js
 ```
 
 `run` is a shell line. Extra arguments are appended to it, or placed where the line uses `$1`, `$2` or `"$@"`.
+
+#### Global commands
+
+Mark an alias or command `"global": true` and it also works without the `zx` prefix, anywhere on the machine:
+
+```jsonc
+"aliases": {
+  "bootstrap": { "run": "doctor --fix", "global": true }
+}
+```
+
+```console
+$ zx global sync
+linked bootstrap
+$ bootstrap          # same as: zx doctor --fix
+```
+
+`zx global` lists each one as `linked`, `not linked` or `taken`. A name is taken when a program with that name is already on your PATH, or when it is a shell built-in such as `cd`; zx leaves those alone and tells you to pick another name. It cannot see aliases and functions defined inside your shell profile, so check those yourself.
+
+The launchers are small files in one folder (`zx global path`), which has to be on your PATH; `zx global` prints the line to add if it is not. zx only ever overwrites or deletes launchers it created. Only your own config can make a command global. A project's `.zx.json` cannot.
 
 ### 2. Project commands
 

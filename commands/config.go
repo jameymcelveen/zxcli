@@ -21,6 +21,9 @@ const StarterConfig = `// zx user config. Comments and trailing commas are fine 
   "aliases": {
     "g": "guid",
     "id": "guid --copy",
+    // Add "global": true to run one without typing "zx" first, then run
+    // "zx global sync". zx refuses names that are already commands.
+    // "bootstrap": { "run": "doctor --fix", "global": true },
   },
 
   // Your own commands. "run" is a shell line, and any extra arguments are

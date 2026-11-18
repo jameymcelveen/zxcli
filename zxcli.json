@@ -236,6 +236,17 @@
       ]
     },
     {
+      "name": "global",
+      "summary": "Make your aliases and commands runnable without the zx prefix",
+      "usage": "zx global [sync | path] [flags]",
+      "group": "zx",
+      "examples": [
+        "zx global",
+        "zx global sync",
+        "zx global --json"
+      ]
+    },
+    {
       "name": "new",
       "summary": "Scaffold a new built-in command (run inside the zxcli repo)",
       "usage": "zx new <name> [flags]",

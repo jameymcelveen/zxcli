@@ -277,7 +277,11 @@ func (a *App) Help(w io.Writer) {
 		note("Project commands  "+a.Config.ProjectPath, s.Name, s.describe())
 	}
 	for _, s := range a.Config.User {
-		note("Your commands  "+a.Config.UserPath, s.Name, s.describe())
+		summary := s.describe()
+		if s.Global {
+			summary += a.Dim("  (global)")
+		}
+		note("Your commands  "+a.Config.UserPath, s.Name, summary)
 	}
 	if len(a.Config.Aliases) > 0 {
 		names := make([]string, 0, len(a.Config.Aliases))
@@ -286,7 +290,11 @@ func (a *App) Help(w io.Writer) {
 		}
 		sort.Strings(names)
 		for _, n := range names {
-			note("Your aliases", n, "zx "+a.Config.Aliases[n])
+			target := "zx " + a.Config.Aliases[n]
+			if a.Config.Global[n] {
+				target += a.Dim("  (global)")
+			}
+			note("Your aliases", n, target)
 		}
 	}
 	for _, p := range ExternalPlugins() {
