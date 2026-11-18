@@ -349,3 +349,31 @@ func TestManifestProblemsAreReported(t *testing.T) {
 		t.Error("invalid JSON should be an error")
 	}
 }
+
+// Shell lines with quotes and redirection must survive on every OS. This is
+// the one script test that also runs on Windows, where cmd.exe is the shell.
+func TestShellLinesKeepTheirQuotes(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "out file.txt")
+	app, out, _ := testApp(t)
+	cfg := Config{User: []Script{
+		{Name: "write", Run: `echo hello > "` + target + `"`},
+		{Name: "speak", Run: `echo "one two"`},
+	}}
+	if err := app.SetConfig(cfg); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.Dispatch([]string{"write"}); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(target)
+	if err != nil || !strings.Contains(string(data), "hello") {
+		t.Errorf("the redirect to a quoted path with a space failed: %v %q", err, data)
+	}
+	if err := app.Dispatch([]string{"speak"}); err != nil || !strings.Contains(out.String(), "one two") {
+		t.Errorf("quoted text was lost: %v %q", err, out.String())
+	}
+	if err := RunCommand(ShellCommand("exit 5", dir), strings.NewReader(""), out, out); err == nil {
+		t.Error("a failing line should report its exit status")
+	}
+}

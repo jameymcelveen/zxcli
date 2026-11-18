@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"errors"
 	"io"
 	"os"
@@ -17,6 +18,10 @@ var positional = regexp.MustCompile(`\$[@*1-9]|\$\{[@*1-9]`)
 // shellCmd builds the process for a script command. Extra arguments are
 // passed along: appended to the line, or wherever the script uses "$@"/$1.
 func shellCmd(s Script, args []string) *exec.Cmd {
+	return shellCmdContext(context.Background(), s, args)
+}
+
+func shellCmdContext(ctx context.Context, s Script, args []string) *exec.Cmd {
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
 		line := s.Run
@@ -26,13 +31,13 @@ func shellCmd(s Script, args []string) *exec.Cmd {
 			}
 			line += " " + a
 		}
-		cmd = exec.Command("cmd", "/C", line)
+		cmd = windowsShell(ctx, line)
 	} else {
 		run := s.Run
 		if !positional.MatchString(run) {
 			run += ` "$@"`
 		}
-		cmd = exec.Command("sh", append([]string{"-c", run, "zx"}, args...)...)
+		cmd = exec.CommandContext(ctx, "sh", append([]string{"-c", run, "zx"}, args...)...)
 	}
 	cmd.Dir = s.Dir
 	return cmd
@@ -42,6 +47,11 @@ func shellCmd(s Script, args []string) *exec.Cmd {
 // current directory): sh -c on macOS and Linux, cmd /C on Windows.
 func ShellCommand(line, dir string) *exec.Cmd {
 	return shellCmd(Script{Run: line, Dir: dir}, nil)
+}
+
+// ShellCommandContext is ShellCommand with a context, for timeouts.
+func ShellCommandContext(ctx context.Context, line, dir string) *exec.Cmd {
+	return shellCmdContext(ctx, Script{Run: line, Dir: dir}, nil)
 }
 
 // RunCommand runs cmd with the given streams. A non-zero exit comes back as

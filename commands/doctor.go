@@ -181,10 +181,7 @@ func evalCheck(d core.DoctorCheck, approved bool) Check {
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		probe := core.ShellCommand(d.Run, d.Dir)
-		cmd := exec.CommandContext(ctx, probe.Path, probe.Args[1:]...)
-		cmd.Dir = probe.Dir
-		out, err := cmd.CombinedOutput()
+		out, err := core.ShellCommandContext(ctx, d.Run, d.Dir).CombinedOutput()
 		if err == nil {
 			ck.Status, ck.OK = "ok", true
 			return ck
