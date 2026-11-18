@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>zx — one command-line tool for everyday developer chores</title>
+<meta name="description" content="zx is a pluggable command-line toolbox written in Go: one small binary, no runtime, zero third-party dependencies. Installers for macOS, Windows and Linux.">
+<meta property="og:title" content="zx — a pluggable Go command-line toolbox">
+<meta property="og:description" content="One small binary. 27 commands, zero dependencies, AI-written commands, installers for macOS, Windows and Linux.">
+<meta property="og:url" content="https://zxcli.com/">
+<meta name="theme-color" content="#0c0e11">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230c0e11'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='17' font-weight='700' text-anchor='middle' fill='%2300add8'%3Ezx%3C/text%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0c0e11; --panel:#14171c; --line:#252a32; --text:#e7e3d8; --dim:#8d949e;
+  --go:#00add8; --amber:#e8b64c; --ok:#6fcf97;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+:root[data-theme="light"]{--bg:#f7f4ec;--panel:#ffffff;--line:#ddd7c8;--text:#1b1d21;--dim:#5d646e;--go:#007d9c;--amber:#9a6a00;--ok:#1f7a4a}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f7f4ec;--panel:#ffffff;--line:#ddd7c8;--text:#1b1d21;--dim:#5d646e;--go:#007d9c;--amber:#9a6a00;--ok:#1f7a4a}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--go);text-decoration:none}a:hover{text-decoration:underline}
+code,pre,.mono{font-family:var(--mono)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+nav{display:flex;align-items:center;gap:20px;padding:18px 0;font-size:14px}
+nav .logo{font:700 20px var(--mono);color:var(--text)}nav .logo b{color:var(--go)}
+nav .sp{flex:1}nav a{color:var(--dim)}nav a:hover{color:var(--text);text-decoration:none}
+.hero{padding:56px 0 36px}
+.hero h1{font:700 clamp(34px,6vw,60px)/1.05 var(--mono);margin:0 0 18px;letter-spacing:-.02em}
+.hero h1 span{color:var(--go)}
+.hero p.lead{font-size:clamp(17px,2.2vw,21px);color:var(--dim);max-width:640px;margin:0 0 28px}
+.hero p.lead strong{color:var(--text);font-weight:600}
+.tabs{display:flex;gap:4px;margin-bottom:-1px}
+.tab{font:13px var(--mono);padding:8px 14px;border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;background:transparent;color:var(--dim);cursor:pointer}
+.tab[aria-selected="true"]{background:var(--panel);color:var(--text)}
+.install{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:0 10px 10px 10px;padding:14px 16px;overflow:hidden}
+.install code{flex:1;overflow-x:auto;white-space:nowrap;font-size:14px;color:var(--text)}
+.install code i{color:var(--amber);font-style:normal;user-select:none}
+.copy{font:12px var(--mono);border:1px solid var(--line);background:transparent;color:var(--dim);border-radius:6px;padding:6px 10px;cursor:pointer}
+.copy:hover{color:var(--text);border-color:var(--dim)}
+.sub{font-size:13px;color:var(--dim);margin:10px 2px 0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:34px 0}
+.stat{background:var(--bg);padding:18px 20px}
+.stat b{display:block;font:700 30px var(--mono);color:var(--text)}
+.stat span{font-size:13px;color:var(--dim)}
+section{padding:44px 0;border-top:1px solid var(--line)}
+section h2{font:700 24px var(--mono);margin:0 0 6px;letter-spacing:-.01em}
+section h2::before{content:"$ ";color:var(--amber)}
+section>p.intro{color:var(--dim);margin:0 0 24px;max-width:680px}
+.term{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.term .bar{display:flex;gap:6px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.term .bar i{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.term pre{margin:0;padding:16px 18px;overflow-x:auto;font-size:13.5px;line-height:1.65}
+.p{color:var(--amber)}.c{color:var(--dim)}.g{color:var(--ok)}.k{color:var(--go)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.card h3{margin:0 0 10px;font:600 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--go)}
+.card ul{list-style:none;margin:0;padding:0}
+.card li{display:flex;gap:10px;padding:5px 0;font-size:14px;border-top:1px dashed var(--line)}
+.card li:first-child{border-top:0}
+.card li code{color:var(--text);min-width:78px;font-size:13px}
+.card li span{color:var(--dim)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+.note{padding:4px 0}
+.note h3{margin:0 0 6px;font-size:16px}
+.note p{margin:0;color:var(--dim);font-size:15px}
+.note code{color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:13px}
+.about{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
+.about p{margin:0 0 12px;color:var(--dim);max-width:640px}
+.about p strong{color:var(--text)}
+.links{display:flex;gap:10px;flex-wrap:wrap}
+.btn{display:inline-block;border:1px solid var(--line);background:var(--panel);color:var(--text);padding:9px 16px;border-radius:8px;font-size:14px}
+.btn:hover{border-color:var(--go);text-decoration:none}
+.btn.main{background:var(--go);border-color:var(--go);color:#041218;font-weight:600}
+footer{border-top:1px solid var(--line);padding:26px 0 44px;color:var(--dim);font-size:13px}
+.fallback{color:var(--dim)}
+@media (max-width:560px){.hero{padding-top:30px}nav .hide{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <span class="logo"><b>z</b>x</span>
+    <span class="sp"></span>
+    <a href="#commands" class="hide">Commands</a>
+    <a href="#ai" class="hide">AI</a>
+    <a href="#built">How it's built</a>
+    <a href="https://github.com/jameymcelveen/zxcli">GitHub</a>
+  </nav>
+
+  <header class="hero">
+    <h1>One small binary for<br>every <span>developer chore</span>.</h1>
+    <p class="lead">zx is a pluggable command-line toolbox written in Go. <strong>No runtime, no dependencies.</strong> Generate GUIDs, decode JWTs, free a port, check a machine's setup, or describe a command in plain English and let an AI write it.</p>
+
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-os="unix">macOS / Linux</button>
+      <button class="tab" role="tab" aria-selected="false" data-os="win">Windows</button>
+    </div>
+    <div class="install">
+      <code id="cmd"></code>
+      <button class="copy" id="copy" type="button">copy</button>
+    </div>
+    <p class="sub">The script checks the download against the release checksums. Prefer an installer? <a href="https://github.com/jameymcelveen/zxcli/releases/latest">.pkg, .exe, .deb and .rpm are on the latest release.</a></p>
+
+    <div class="stats">
+      <div class="stat"><b>27</b><span>commands, one file each</span></div>
+      <div class="stat"><b>0</b><span>third-party dependencies</span></div>
+      <div class="stat"><b>88</b><span>test functions</span></div>
+      <div class="stat"><b>3</b><span>operating systems, 4 installers</span></div>
+    </div>
+  </header>
+
+  <section id="demo">
+    <h2>zx</h2>
+    <p class="intro">Every command takes arguments or a pipe, and every command can put its result on the clipboard with <code>--copy</code>.</p>
+    <div class="term"><div class="bar"><i></i><i></i><i></i></div>
+<pre><span class="p">$</span> zx guid
+<span class="g">3f2b8c1e-9d47-4a6b-8e21-5c0f7a9d1b34</span>
+
+<span class="p">$</span> zx now 1700000000          <span class="c"># epoch → local, UTC and ISO time</span>
+<span class="p">$</span> zx port 3000 -k            <span class="c"># see what is on port 3000 and stop it</span>
+<span class="p">$</span> curl -s api.example.com | zx json
+<span class="p">$</span> zx paste | zx json | zx clip <span class="c"># the clipboard as a pipe, same on every OS</span>
+<span class="p">$</span> zx doctor --fix            <span class="c"># check this machine and project, install what's missing</span></pre>
+    </div>
+  </section>
+
+  <section id="commands">
+    <h2>commands</h2>
+    <p class="intro">Run <code>zx</code> alone to list them, <code>zx help &lt;command&gt;</code> for details. This list is read from the same manifest the binary embeds.</p>
+    <div class="grid" id="grid"><p class="fallback">The command list loads from <a href="zxcli.json">zxcli.json</a>. It is also in the <a href="https://github.com/jameymcelveen/zxcli#commands">README</a>.</p></div>
+  </section>
+
+  <section id="ai">
+    <h2>zx "do the thing"</h2>
+    <p class="intro">Describe a chore. zx asks the AI you choose (Claude Code, Ollama, an Anthropic API key, or your own command) to write it as a script, shows it to you, and only then runs or saves it.</p>
+    <div class="term"><div class="bar"><i></i><i></i><i></i></div>
+<pre><span class="p">$</span> zx new "bump the version, update the readme, tag the repo"
+<span class="c">asking claude...</span>
+<span class="k">?</span> Patch, minor or major by default?
+<span class="k">&gt;</span> patch
+
+zx bump  Bump the version, update the README and tag the repo  <span class="c">(sh, 31 lines)</span>
+------------------------------------------------------------
+Save it as zx bump? [y/N] <span class="g">y</span>
+saved .zx/commands/bump.sh
+
+<span class="p">$</span> zx "rename every .jpeg in this folder to .jpg"
+<span class="c">...the script is shown first...</span>
+Run it now? [y/N]</pre>
+    </div>
+    <div class="cols" style="margin-top:22px">
+      <div class="note"><h3>You choose the model</h3><p><code>zx ai</code> shows what is installed and remembers your pick for the machine or the project. Nothing is sent to a service you did not pick.</p></div>
+      <div class="note"><h3>Always shown first</h3><p><code>zx new</code> saves and never runs. A sentence runs only after you say yes, every time.</p></div>
+      <div class="note"><h3>Small data footprint</h3><p>Only your request, the file <em>names</em> in the folder and your command names are sent. File contents are not, and zx stores no keys.</p></div>
+    </div>
+  </section>
+
+  <section id="built">
+    <h2>how it's built</h2>
+    <p class="intro">A command is one file with one <code>init()</code>. That is the whole plug-in API.</p>
+    <div class="term"><div class="bar"><i></i><i></i><i></i></div>
+<pre><span class="c">// commands/guid.go</span>
+<span class="k">func</span> init() { core.Register(<span class="g">"guid"</span>, runGuid) }
+
+<span class="k">func</span> runGuid(c *core.Context) <span class="k">error</span> {
+    fs := c.Flags()
+    n  := fs.Int(<span class="g">"n"</span>, 1, <span class="g">"how many to generate"</span>)
+    pos, err := c.Parse(fs)   <span class="c">// flags may come before or after positionals</span>
+    ...
+}</pre>
+    </div>
+    <div class="cols" style="margin-top:22px">
+      <div class="note"><h3>Standard library only</h3><p>Zero entries in <code>go.mod</code>'s require block: flag parsing, JSONC config, the HTTP server, the clipboard shim and the self-updater are all hand-built on the stdlib. One static binary per platform.</p></div>
+      <div class="note"><h3>Manifest and code can't drift</h3><p>Commands are declared in <code>zxcli.json</code>, embedded with <code>//go:embed</code>, and a test fails the build if a registered command has no manifest entry or the reverse.</p></div>
+      <div class="note"><h3>Layered, with plug-ins</h3><p>Built-ins, then project scripts (<code>.zx/commands</code>), user scripts, then any <code>zx-&lt;name&gt;</code> on PATH. Scripts can be <code>.sh</code>, <code>.js</code>, <code>.ts</code>, <code>.py</code> or <code>.ps1</code>, run with whatever is installed.</p></div>
+      <div class="note"><h3>Written for three OSes</h3><p>CI runs on Linux and Windows. A real Windows bug (Go's argument escaping mangling quoted shell lines for <code>cmd.exe</code>) was fixed with <code>SysProcAttr.CmdLine</code> and pinned with a cross-platform test.</p></div>
+      <div class="note"><h3>Safe by default</h3><p><code>zx doctor --fix</code> shows every install command and asks first. Project-defined checks need a stored hash approval. Global launchers refuse names that are already programs or shell built-ins.</p></div>
+      <div class="note"><h3>Release engineering included</h3><p>Tag a version and Actions builds archives, <code>.deb</code>/<code>.rpm</code> (nfpm), a Windows setup, and a macOS <code>.pkg</code>, with checksums. <code>zx upgrade</code> verifies them before replacing the binary.</p></div>
+    </div>
+  </section>
+
+  <section id="about">
+    <h2>who made this</h2>
+    <div class="about">
+      <div>
+        <p><strong>Jamey McElveen</strong> — principal .NET architect with 30+ years of experience and a published technical author. zx started as a way to stop keeping a junk drawer of one-off scripts, and it is a working example of how I like to build: small pieces, tests alongside, and things that ship.</p>
+        <div class="links">
+          <a class="btn main" href="https://github.com/jameymcelveen/zxcli">View the source</a>
+          <a class="btn" href="https://github.com/jameymcelveen/zxcli/releases/latest">Latest release</a>
+          <a class="btn" href="https://jameymcelveen.com">jameymcelveen.com</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>MIT licensed. © Jamey McElveen. Built in Go.</footer>
+</div>
+
+<script>
+(function(){
+  var cmds={
+    unix:'curl -fsSL https://raw.githubusercontent.com/jameymcelveen/zxcli/main/scripts/install.sh | sh',
+    win:'irm https://raw.githubusercontent.com/jameymcelveen/zxcli/main/scripts/install.ps1 | iex'
+  };
+  var os='unix',box=document.getElementById('cmd'),btn=document.getElementById('copy');
+  try{if(/Win/.test(navigator.platform))os='win'}catch(e){}
+  function show(){
+    box.innerHTML='';
+    var i=document.createElement('i');i.textContent=os==='win'?'PS> ':'$ ';
+    box.appendChild(i);box.appendChild(document.createTextNode(cmds[os]));
+    document.querySelectorAll('.tab').forEach(function(t){t.setAttribute('aria-selected',String(t.dataset.os===os))});
+  }
+  document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click',function(){os=t.dataset.os;show()})});
+  btn.addEventListener('click',function(){
+    var done=function(){btn.textContent='copied';setTimeout(function(){btn.textContent='copy'},1400)};
+    if(navigator.clipboard){navigator.clipboard.writeText(cmds[os]).then(done,function(){})}
+  });
+  show();
+
+  fetch('zxcli.json').then(function(r){return r.json()}).then(function(m){
+    var groups={},order=[];
+    m.commands.forEach(function(c){
+      if(!c.group||c.name.indexOf('__')===0)return;
+      if(!groups[c.group]){groups[c.group]=[];order.push(c.group)}
+      groups[c.group].push(c);
+    });
+    var grid=document.getElementById('grid');grid.innerHTML='';
+    order.forEach(function(g){
+      var card=document.createElement('div');card.className='card';
+      var h=document.createElement('h3');h.textContent=g;card.appendChild(h);
+      var ul=document.createElement('ul');
+      groups[g].forEach(function(c){
+        var li=document.createElement('li'),code=document.createElement('code'),sp=document.createElement('span');
+        code.textContent=c.name;sp.textContent=c.summary;li.appendChild(code);li.appendChild(sp);ul.appendChild(li);
+      });
+      card.appendChild(ul);grid.appendChild(card);
+    });
+  }).catch(function(){});
+})();
+</script>
+</body>
+</html>
