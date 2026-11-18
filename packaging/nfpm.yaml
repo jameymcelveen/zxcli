@@ -1,0 +1,17 @@
+# Template for the .deb and .rpm packages. "make linux-packages" fills in the
+# @PLACEHOLDERS@ and writes the result to dist/.
+name: zx
+arch: "@ARCH@"
+platform: linux
+version: "@VERSION@"
+section: utils
+priority: optional
+maintainer: Jamey McElveen <jameymcelveen@users.noreply.github.com>
+description: A pluggable toolbox for everyday developer chores.
+homepage: https://github.com/jameymcelveen/zxcli
+license: MIT
+contents:
+  - src: "@BIN@"
+    dst: /usr/bin/zx
+    file_info:
+      mode: 0755

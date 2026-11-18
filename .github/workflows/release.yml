@@ -1,0 +1,139 @@
+name: Release
+
+# Push a tag like v0.1.0 to build every installer, test-install each one on a
+# real Linux, macOS and Windows machine, and publish a GitHub release.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  VERSION: ${{ github.ref_name }}
+
+jobs:
+  build:
+    name: build archives, deb, rpm, Windows setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - run: sudo apt-get update && sudo apt-get install -y nsis
+      - run: make check
+      - run: make archives linux-packages windows-installer VERSION="$VERSION"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-main
+          if-no-files-found: error
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.deb
+            dist/*.rpm
+            dist/*_setup.exe
+
+  macos:
+    name: build and test the macOS pkg
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - run: make pkg VERSION="$VERSION"
+      - name: Install the pkg and run zx
+        run: |
+          sudo installer -pkg dist/zx_darwin_universal.pkg -target /
+          cd /tmp
+          zx version
+          zx version | grep -F "$VERSION"
+          zx guid
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-macos
+          if-no-files-found: error
+          path: dist/*.pkg
+
+  test-linux:
+    name: test the deb
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-main
+          path: dist
+      - run: |
+          sudo dpkg -i dist/zx_linux_amd64.deb
+          zx version
+          zx version | grep -F "$VERSION"
+          zx guid
+          echo '{"ok":true}' | zx json
+
+  test-windows:
+    name: test the Windows setup
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-main
+          path: dist
+      - shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Start-Process -FilePath dist\zx_windows_amd64_setup.exe -ArgumentList '/S' -Wait
+          $dir = Join-Path $env:LOCALAPPDATA 'Programs\zx'
+          $exe = Join-Path $dir 'zx.exe'
+          if (-not (Test-Path $exe)) { throw "zx.exe was not installed to $dir" }
+          $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+          if (($userPath -split ';') -notcontains $dir) { throw "the installer did not add $dir to PATH: $userPath" }
+          & $exe version
+          if (-not ((& $exe version) -match [regex]::Escape($env:VERSION))) { throw 'wrong version' }
+          & $exe guid
+          if ($LASTEXITCODE -ne 0) { throw 'zx guid failed' }
+
+  release:
+    name: publish the release
+    needs: [build, macos, test-linux, test-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - run: make checksums && cat dist/checksums.txt
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$VERSION" --title "zx $VERSION" --generate-notes \
+            dist/*.tar.gz dist/*.zip dist/*.deb dist/*.rpm dist/*.pkg dist/*_setup.exe dist/checksums.txt
+
+  test-install-scripts:
+    name: test install scripts (${{ matrix.os }})
+    needs: release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: install.sh
+        if: runner.os != 'Windows'
+        run: |
+          ZX_VERSION="$VERSION" ZX_INSTALL_DIR="$HOME/zxbin" sh scripts/install.sh
+          "$HOME/zxbin/zx" guid
+      - name: install.ps1
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:ZX_VERSION = $env:VERSION
+          ./scripts/install.ps1
+          & (Join-Path $env:LOCALAPPDATA 'Programs\zx\zx.exe') guid
+          if ($LASTEXITCODE -ne 0) { throw 'zx guid failed' }

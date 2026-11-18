@@ -1,0 +1,213 @@
+{
+  "tagline": "A pluggable toolbox for everyday developer chores.",
+  "commands": [
+    {
+      "name": "guid",
+      "summary": "Generate GUIDs / UUIDs",
+      "usage": "zx guid [count] [flags]",
+      "group": "Generate",
+      "aliases": [
+        "uuid"
+      ],
+      "examples": [
+        "zx guid",
+        "zx guid 5 -u",
+        "zx guid -7 --copy"
+      ]
+    },
+    {
+      "name": "pw",
+      "summary": "Generate strong random passwords",
+      "usage": "zx pw [length] [flags]",
+      "group": "Generate",
+      "aliases": [
+        "password"
+      ],
+      "examples": [
+        "zx pw",
+        "zx pw 32 --copy",
+        "zx pw -n 5 --no-symbols"
+      ]
+    },
+    {
+      "name": "lorem",
+      "summary": "Generate placeholder text",
+      "usage": "zx lorem [paragraphs] [flags]",
+      "group": "Generate",
+      "examples": [
+        "zx lorem",
+        "zx lorem 3",
+        "zx lorem -w 12"
+      ]
+    },
+    {
+      "name": "now",
+      "summary": "Show the time, or convert an epoch or date",
+      "usage": "zx now [epoch | date] [flags]",
+      "group": "Convert",
+      "aliases": [
+        "epoch"
+      ],
+      "examples": [
+        "zx now",
+        "zx now 1700000000",
+        "zx now 2026-11-18T10:00:00Z",
+        "zx now -f epoch --copy"
+      ]
+    },
+    {
+      "name": "b64",
+      "summary": "Base64 encode or decode",
+      "usage": "zx b64 [text] [flags]",
+      "group": "Convert",
+      "aliases": [
+        "base64"
+      ],
+      "examples": [
+        "zx b64 hello",
+        "zx b64 -d aGVsbG8=",
+        "cat photo.png | zx b64 --copy"
+      ]
+    },
+    {
+      "name": "url",
+      "summary": "URL-encode, decode, or take a URL apart",
+      "usage": "zx url [text] [flags]",
+      "group": "Convert",
+      "examples": [
+        "zx url \"a b&c\"",
+        "zx url -d a%20b%26c",
+        "zx url -p \"https://example.com/x?id=7\""
+      ]
+    },
+    {
+      "name": "case",
+      "summary": "Convert text between naming styles",
+      "usage": "zx case [style] <text>",
+      "group": "Convert",
+      "examples": [
+        "zx case \"hello world\"",
+        "zx case snake HelloWorld",
+        "zx case pascal my-var-name"
+      ]
+    },
+    {
+      "name": "slug",
+      "summary": "Turn text into a url-friendly-slug",
+      "usage": "zx slug <text>",
+      "group": "Convert",
+      "examples": [
+        "zx slug \"Hello, World!\""
+      ]
+    },
+    {
+      "name": "json",
+      "summary": "Pretty-print, minify, or validate JSON",
+      "usage": "zx json [file] [flags]",
+      "group": "Inspect",
+      "examples": [
+        "curl -s api.example.com | zx json",
+        "zx json data.json -m"
+      ]
+    },
+    {
+      "name": "jwt",
+      "summary": "Decode a JWT and show when it expires",
+      "usage": "zx jwt <token>",
+      "group": "Inspect",
+      "examples": [
+        "zx jwt eyJhbGciOi...",
+        "pbpaste | zx jwt"
+      ]
+    },
+    {
+      "name": "hash",
+      "summary": "Hash files, text, or stdin",
+      "usage": "zx hash [file...] [flags]",
+      "group": "Inspect",
+      "examples": [
+        "zx hash setup.exe",
+        "zx hash -a md5 -s hello",
+        "cat file | zx hash"
+      ]
+    },
+    {
+      "name": "port",
+      "summary": "Show what is listening on a port, and stop it",
+      "usage": "zx port [number] [flags]",
+      "group": "System",
+      "examples": [
+        "zx port",
+        "zx port 3000",
+        "zx port 3000 -k"
+      ]
+    },
+    {
+      "name": "ip",
+      "summary": "Show this machine's local IP addresses",
+      "usage": "zx ip [flags]",
+      "group": "System",
+      "examples": [
+        "zx ip",
+        "zx ip -1 --copy"
+      ]
+    },
+    {
+      "name": "serve",
+      "summary": "Serve a folder over HTTP",
+      "usage": "zx serve [folder] [flags]",
+      "group": "System",
+      "examples": [
+        "zx serve",
+        "zx serve ./dist -p 3000",
+        "zx serve --lan"
+      ]
+    },
+    {
+      "name": "config",
+      "summary": "Show, create, or edit your zx config",
+      "usage": "zx config [init | edit | path]",
+      "group": "zx",
+      "examples": [
+        "zx config",
+        "zx config init",
+        "zx config edit"
+      ]
+    },
+    {
+      "name": "new",
+      "summary": "Scaffold a new built-in command (run inside the zxcli repo)",
+      "usage": "zx new <name> [flags]",
+      "group": "zx",
+      "examples": [
+        "zx new dice -s \"Roll some dice\" -g Generate"
+      ]
+    },
+    {
+      "name": "completion",
+      "summary": "Print a shell completion script",
+      "usage": "zx completion <bash | zsh | fish | powershell>",
+      "group": "zx",
+      "examples": [
+        "zx completion zsh > ~/.zsh/completions/_zx"
+      ]
+    },
+    {
+      "name": "version",
+      "summary": "Print the version",
+      "usage": "zx version",
+      "group": "zx"
+    },
+    {
+      "name": "help",
+      "summary": "Show help for zx or for one command",
+      "usage": "zx help [command]",
+      "group": "zx"
+    },
+    {
+      "name": "__complete",
+      "summary": "List command names for shell completion",
+      "hidden": true
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+// Project commands for working on zx itself. Inside this repo, "zx check"
+// runs the line below. Any project can have a .zx.json like this one.
+{
+  "commands": [
+    { "name": "check", "summary": "lint and test before pushing", "run": "make check" },
+    { "name": "rebuild", "summary": "build and install this checkout", "run": "make install" },
+  ],
+}
