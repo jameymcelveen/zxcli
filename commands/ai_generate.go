@@ -17,8 +17,9 @@ import (
 
 func init() { core.Register("__ask", runAsk) }
 
-// generated is what the AI hands back: either questions, or a command.
+// generated is what the AI hands back: an answer, questions, or a command.
 type generated struct {
+	Answer    string   `json:"answer"`
 	Questions []string `json:"questions"`
 	Name      string   `json:"name"`
 	Summary   string   `json:"summary"`
@@ -27,6 +28,18 @@ type generated struct {
 }
 
 const maxScriptBytes = 64 << 10
+
+// zxGuide is what the AI is told about zx itself, so it can answer "how do I
+// ..." questions without guessing. Keep it in step with the README.
+const zxGuide = `- "zx" alone lists every command; "zx help <command>" shows one.
+- Aliases and your own commands live in the config file. "zx config init" creates ~/.config/zx/zxcli.json (comments allowed). A project can have its own .zx.json.
+  Alias:    { "aliases": { "id": "guid --copy" } }
+  Command:  { "commands": [ { "name": "gs", "summary": "git status, short", "run": "git status -sb" } ] }
+- To type an alias or command without "zx" from anywhere, add "global": true, e.g. { "aliases": { "bootstrap": { "run": "doctor --fix", "global": true } } }, then run "zx global sync" and put "zx global path" on your PATH.
+- Script commands: put a .sh, .js, .ts, .py or .ps1 file in .zx/commands (this project) or ~/.config/zx/commands (everywhere). The file name is the command. A "# summary: ..." comment near the top becomes its help text.
+- zx new "<what it should do>" has the AI write a script command and save it after you approve. zx "<a sentence>" does a one-off job: it shows the script and runs it only if you say yes.
+- zx ai picks which AI to use; zx ai test checks it. zx doctor checks a machine or project, and zx doctor --fix installs what is missing.
+- Any command takes --copy to put its output on the clipboard.`
 
 // buildPrompt describes the task, the machine and the folder to the AI. It
 // sends file names, never file contents.
@@ -56,12 +69,16 @@ func buildPrompt(cfg core.Config, request, dir string, taken []string, qa []stri
 	if len(qa) > 0 {
 		b.WriteString("You already asked, and the user answered:\n" + strings.Join(qa, "\n") + "\n\n")
 	}
+	b.WriteString("About zx, in case the user is asking how something works:\n" + zxGuide + "\n")
 	b.WriteString("Reply with ONE JSON object and nothing else: no prose, no code fence.\n\n")
+	b.WriteString("If the user is asking HOW to do something, or asking a question, rather than asking for work to be done, reply with an answer and no script:\n")
+	b.WriteString(`{"answer": "..."}` + "\n")
+	b.WriteString("The answer is plain text for a terminal, under 15 lines, with the exact commands or config to use. Only describe zx features that are listed above; if you are not sure, say so.\n\n")
 	if noMoreQuestions {
 		b.WriteString("Do not ask any questions. Make sensible choices and note them in comments in the script.\n\n")
 	} else {
 		b.WriteString("If a wrong guess would matter and only the user knows the answer, reply with up to 3 short questions:\n")
-		b.WriteString(`{"questions": ["...", "..."]}` + "\n\nOtherwise reply ")
+		b.WriteString(`{"questions": ["...", "..."]}` + "\n\nOtherwise, to have work done, reply ")
 	}
 	b.WriteString("with the command:\n")
 	b.WriteString(`{"name": "...", "summary": "...", "language": "` + firstNonEmpty(strings.Join(langs[:min(1, len(langs))], ""), "sh") + `", "script": "..."}` + "\n")
@@ -138,9 +155,13 @@ func generate(c *core.Context, p *prompter, provider *aiProvider, request, dir s
 		fmt.Fprintf(c.Stderr, "%s\n", c.App.Dim("asking "+provider.ID+"..."))
 		reply, err := provider.Ask(c.App.Config, buildPrompt(c.App.Config, request, dir, taken, qa, len(qa) >= 6 || round >= 2))
 		if err != nil {
-			return nil, fmt.Errorf("%s did not answer: %w", provider.ID, err)
+			return nil, askError(provider.ID, err)
 		}
 		g, err := extractJSON(reply)
+		if err == nil && strings.TrimSpace(g.Answer) != "" && strings.TrimSpace(g.Script) == "" && len(g.Questions) == 0 {
+			g.Answer = strings.TrimSpace(g.Answer)
+			return &g, nil
+		}
 		if err == nil && len(g.Questions) == 0 {
 			err = g.validate()
 		}
@@ -152,6 +173,7 @@ func generate(c *core.Context, p *prompter, provider *aiProvider, request, dir s
 			continue
 		}
 		if len(g.Questions) == 0 {
+			g.Answer = "" // it is a command; any stray answer text is ignored
 			return &g, nil
 		}
 		for _, q := range g.Questions {
@@ -260,6 +282,11 @@ func saveGenerated(c *core.Context, p *prompter, g *generated, script, dir, scop
 	return path, nil
 }
 
+// printAnswer shows a plain-text answer. Nothing is saved or run for one.
+func printAnswer(c *core.Context, g *generated) {
+	c.Println(g.Answer)
+}
+
 // aiNew implements zx new "<what the command should do>".
 func aiNew(c *core.Context, request, scope string, yes bool) error {
 	p := newPrompter(c)
@@ -274,6 +301,11 @@ func aiNew(c *core.Context, request, scope string, yes bool) error {
 	g, err := generate(c, p, provider, request, dir)
 	if err != nil {
 		return err
+	}
+	if g.Answer != "" {
+		printAnswer(c, g)
+		fmt.Fprintln(c.Stderr, c.App.Dim("that was a question, so no command was written. To have one written, describe what it should do."))
+		return nil
 	}
 	script := g.withHeader(provider.ID, request)
 	showGenerated(c, g, script)
@@ -315,6 +347,10 @@ func runAsk(c *core.Context) error {
 	g, err := generate(c, p, provider, request, dir)
 	if err != nil {
 		return err
+	}
+	if g.Answer != "" {
+		printAnswer(c, g)
+		return nil
 	}
 	script := g.withHeader(provider.ID, request)
 	showGenerated(c, g, script)

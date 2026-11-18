@@ -368,3 +368,62 @@ func TestNoAIInstalled(t *testing.T) {
 		t.Errorf("got %v", err)
 	}
 }
+
+func TestHowToQuestionsGetAnAnswerNotAScript(t *testing.T) {
+	answer := `{"answer": "Add it to your config:\n  { \"aliases\": { \"id\": \"guid --copy\" } }"}`
+	ai, _, project, run := aiFixture(t, true, answer)
+	out, _, err := run("y\ny\n", "how do I make a new alias")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, `"aliases"`) || !strings.Contains(out, "guid --copy") {
+		t.Errorf("the answer should be printed:\n%s", out)
+	}
+	if fileExists(filepath.Join(project, ".zx", "commands")) {
+		t.Error("an answer must not save anything")
+	}
+	if len(ai.prompts) != 1 || !strings.Contains(ai.prompts[0], "zx config init") || !strings.Contains(ai.prompts[0], `{"answer": "..."}`) {
+		t.Error("the prompt should tell the AI about zx and that it may answer")
+	}
+
+	// zx new with a question prints the answer, says why nothing was written, and saves nothing.
+	_, _, project, run = aiFixture(t, true, answer)
+	out, errOut, err := run("y\n", "new", "how do I make a new alias")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "guid --copy") || !strings.Contains(errOut, "no command was written") || fileExists(filepath.Join(project, ".zx", "commands")) {
+		t.Errorf("zx new with a question: out=%q err=%q", out, errOut)
+	}
+
+	// An answer that also carries a script is treated as a command, not an answer.
+	both := `{"answer": "here", "name": "mark", "summary": "Write a marker file", "language": "js", "script": "console.log(1)"}`
+	_, _, _, run = aiFixture(t, true, both)
+	out, errOut, err = run("n\nn\n", "write a marker file here")
+	if err != nil || strings.Contains(out, "here") || !strings.Contains(errOut, "zx mark") {
+		t.Errorf("a reply with a script should be shown as a command: out=%q err=%q %v", out, errOut, err)
+	}
+}
+
+func TestAIErrorsSayHowToFixThem(t *testing.T) {
+	cases := []struct{ provider, msg, want string }{
+		{"claude", "claude: exit status 1: Failed to authenticate: OAuth session expired and could not be refreshed", "sign in again"},
+		{"claude", `exec: "claude": executable file not found in $PATH`, "not installed"},
+		{"ollama", "Post http://127.0.0.1:11434/api/generate: dial tcp 127.0.0.1:11434: connect: connection refused", "not running"},
+		{"ollama", "404 Not Found: model 'llama9' not found", "ollama pull"},
+		{"anthropic", "401 Unauthorized: invalid x-api-key", "rejected the key"},
+		{"anthropic", "429 Too Many Requests: rate_limit_error", "rate limiting"},
+		{"claude", "context deadline exceeded", "too long"},
+		{"custom", "exit status 127: not found", "ai.command"},
+	}
+	for _, tc := range cases {
+		err := askError(tc.provider, errors.New(tc.msg))
+		if !strings.Contains(err.Error(), tc.msg) || !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("%s / %q: got %q, want a hint containing %q", tc.provider, tc.msg, err, tc.want)
+		}
+	}
+	// Anything unknown still points somewhere useful.
+	if err := askError("claude", errors.New("something odd")); !strings.Contains(err.Error(), "zx ai test") {
+		t.Errorf("unknown errors should point to zx ai test: %v", err)
+	}
+}

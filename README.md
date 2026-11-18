@@ -106,6 +106,7 @@ It worked. Save it as zx fix-jpegs for next time? [y/N/never]
 ```
 
 - **You choose the AI.** `zx ai` shows what is installed (Claude Code, Ollama, an Anthropic API key, or your own command) and remembers your pick for the machine, or with `--local` for one project. The first AI command asks if you have not picked yet. `zx ai test` checks that it answers.
+- **Questions get answers.** Ask how something works, `zx "how do I make an alias"`, and zx prints the answer instead of writing a script. Nothing is saved or run.
 - **zx always shows the script first.** `zx new` saves and never runs. A sentence runs only after you answer yes, every time. `never` turns off the offer to save, not the question about running.
 - **What is sent:** your request, the names of the files in the current folder, and your command names. File contents are not sent, and zx stores no keys.
 - **It is still a script someone else wrote.** Read it before you run it, the same as you would a script from the internet.

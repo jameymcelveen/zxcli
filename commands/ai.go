@@ -210,6 +210,50 @@ func postJSON(url string, headers map[string]string, body, into any) error {
 	return json.Unmarshal(raw, into)
 }
 
+// askError wraps a failure from an AI with what to do about it, for the
+// failures people actually run into.
+func askError(providerID string, err error) error {
+	hint := aiHint(providerID, err.Error())
+	if hint == "" {
+		hint = "Run 'zx ai test' to check it, or 'zx ai' to choose another AI."
+	}
+	return fmt.Errorf("%s did not answer: %w\n%s", providerID, err, hint)
+}
+
+// aiHint turns a provider error into advice. It returns "" when it has none.
+func aiHint(providerID, msg string) string {
+	m := strings.ToLower(msg)
+	has := func(words ...string) bool {
+		for _, w := range words {
+			if strings.Contains(m, w) {
+				return true
+			}
+		}
+		return false
+	}
+	switch {
+	case has("deadline exceeded", "timed out", "timeout"):
+		return "It took too long to answer. Try again, or use a smaller or faster model (zx ai --model <name>)."
+	case providerID == "claude" && has("oauth", "failed to authenticate", "not logged in", "please run /login", "authentication"):
+		return "Claude Code needs you to sign in again. Run 'claude' and sign in (type /login if it does not ask), then try again."
+	case providerID == "claude" && has("executable file not found", "no such file"):
+		return "Claude Code is not installed or is not on your PATH. Install it, or run 'zx ai' to choose another AI."
+	case providerID == "ollama" && has("connection refused", "no such host", "cannot assign requested address"):
+		return "Ollama is not running. Start the Ollama app, or run 'ollama serve', then try again."
+	case providerID == "ollama" && has("model") && has("not found", "404"):
+		return "Ollama does not have that model. Run 'ollama pull <model>', or 'zx ai' to pick another."
+	case providerID == "anthropic" && has("401", "invalid x-api-key", "authentication_error"):
+		return "The Anthropic API rejected the key. Check that ANTHROPIC_API_KEY is correct and still active."
+	case providerID == "anthropic" && has("429", "rate_limit", "credit balance", "overloaded"):
+		return "The Anthropic API is rate limiting you or the account is out of credit. Wait a moment, or check your plan."
+	case providerID == "anthropic" && has("no such host", "dial tcp", "network is unreachable"):
+		return "zx could not reach api.anthropic.com. Check your internet connection."
+	case providerID == "custom":
+		return "Check the \"ai.command\" setting: it must be a program that reads the prompt on stdin and prints the reply."
+	}
+	return ""
+}
+
 func findProvider(id string) *aiProvider {
 	for i := range aiProviders {
 		if aiProviders[i].ID == id {
@@ -288,7 +332,7 @@ func runAI(c *core.Context) error {
 		}
 		reply, err := provider.Ask(c.App.Config, "Reply with the single word: ready")
 		if err != nil {
-			return fmt.Errorf("%s did not answer: %w", provider.ID, err)
+			return askError(provider.ID, err)
 		}
 		c.Printf("%s answered: %s\n", provider.ID, firstLine(reply))
 		return nil
