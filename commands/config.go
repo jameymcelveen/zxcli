@@ -36,8 +36,16 @@ const StarterConfig = `// zx user config. Comments and trailing commas are fine 
   // Options for individual commands.
   "settings": {
     // "repos.dir": "~/dev",                  // where "zx repos" looks
-    // "doctor.tools": "git, gh, go, dotnet", // what "zx doctor" checks
   },
+
+  // What "zx doctor" checks on this machine. A project can add its own list
+  // in its .zx.json. Without this list, zx checks a default set of tools.
+  // "doctor": [
+  //   "git",
+  //   { "tool": "dotnet", "min": "10.0" },
+  //   { "tool": "terraform", "install": { "mac": "brew install terraform", "windows": "winget install -e --id Hashicorp.Terraform" } },
+  //   { "name": "VPN is up", "run": "ping -c 1 intranet.example.com" },
+  // ],
 }
 `
 

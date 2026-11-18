@@ -38,17 +38,20 @@ type configFile struct {
 	Commands []Script          `json:"commands"`
 	Disabled []string          `json:"disabled"`
 	Settings map[string]string `json:"settings"`
+	Doctor   []DoctorCheck     `json:"doctor"`
 }
 
 // Config is the merged user and project configuration.
 type Config struct {
-	Aliases     map[string]string
-	Disabled    map[string]bool
-	Settings    map[string]string // free-form options read by individual commands
-	User        []Script
-	Project     []Script
-	UserPath    string // where the user config lives (it may not exist yet)
-	ProjectPath string // empty when no .zx.json was found
+	Aliases       map[string]string
+	Disabled      map[string]bool
+	Settings      map[string]string // free-form options read by individual commands
+	UserDoctor    []DoctorCheck     // "doctor" list from the user config; nil when absent
+	ProjectDoctor []DoctorCheck     // "doctor" list from the project config
+	User          []Script
+	Project       []Script
+	UserPath      string // where the user config lives (it may not exist yet)
+	ProjectPath   string // empty when no .zx.json was found
 }
 
 // Setting returns a value from the "settings" block, or def when it is unset.
@@ -138,6 +141,22 @@ func LoadConfig(cwd string) (Config, []string) {
 		for k, v := range f.Settings {
 			cfg.Settings[k] = v
 		}
+		if f.Doctor != nil && !project {
+			cfg.UserDoctor = []DoctorCheck{}
+		}
+		for _, d := range f.Doctor {
+			if err := d.validate(); err != nil {
+				warnings = append(warnings, fmt.Sprintf("%s: skipping a doctor check: %v", path, err))
+				continue
+			}
+			d.Source = path
+			if project {
+				d.Project, d.Dir = true, filepath.Dir(path)
+				cfg.ProjectDoctor = append(cfg.ProjectDoctor, d)
+			} else {
+				cfg.UserDoctor = append(cfg.UserDoctor, d)
+			}
+		}
 		for _, s := range f.Commands {
 			if !scriptName.MatchString(s.Name) || s.Run == "" {
 				warnings = append(warnings, fmt.Sprintf("%s: skipping command %q: it needs a simple name and a \"run\" line", path, s.Name))
@@ -225,4 +244,86 @@ func StripJSONC(in []byte) []byte {
 		}
 	}
 	return out
+}
+
+// DoctorCheck is one requirement that "zx doctor" verifies. It is either a
+// tool that must be installed (optionally at a minimum version) or a named
+// shell command that must succeed. In config it may be written as a bare
+// string, which means a tool: "git".
+type DoctorCheck struct {
+	Tool    string     `json:"tool,omitempty"`
+	Min     string     `json:"min,omitempty"`
+	Name    string     `json:"name,omitempty"`
+	Run     string     `json:"run,omitempty"`
+	Install OSCommands `json:"install,omitempty"`
+	Upgrade OSCommands `json:"upgrade,omitempty"`
+
+	Source  string `json:"-"` // file the check was defined in
+	Dir     string `json:"-"` // working directory for Run
+	Project bool   `json:"-"` // true when it came from a project's .zx.json
+}
+
+// UnmarshalJSON accepts "git" as shorthand for {"tool": "git"}.
+func (d *DoctorCheck) UnmarshalJSON(b []byte) error {
+	var tool string
+	if json.Unmarshal(b, &tool) == nil {
+		*d = DoctorCheck{Tool: tool}
+		return nil
+	}
+	type plain DoctorCheck
+	return json.Unmarshal(b, (*plain)(d))
+}
+
+func (d DoctorCheck) validate() error {
+	switch {
+	case d.Tool != "" && d.Run != "":
+		return fmt.Errorf("%q has both \"tool\" and \"run\"; use one", d.Tool)
+	case d.Tool != "" && !scriptName.MatchString(d.Tool):
+		return fmt.Errorf("%q is not a program name", d.Tool)
+	case d.Tool == "" && (d.Name == "" || d.Run == ""):
+		return errors.New("it needs either \"tool\", or both \"name\" and \"run\"")
+	}
+	return nil
+}
+
+// Label is the name shown in the report.
+func (d DoctorCheck) Label() string {
+	if d.Name != "" {
+		return d.Name
+	}
+	return d.Tool
+}
+
+// OSCommands is a shell command per operating system. In config it is either
+// one string used everywhere, or an object keyed by "mac", "windows" and
+// "linux".
+type OSCommands map[string]string
+
+// UnmarshalJSON accepts a plain string as "the same command on every OS".
+func (o *OSCommands) UnmarshalJSON(b []byte) error {
+	var one string
+	if json.Unmarshal(b, &one) == nil {
+		*o = OSCommands{"all": one}
+		return nil
+	}
+	var m map[string]string
+	if err := json.Unmarshal(b, &m); err != nil {
+		return errors.New("\"install\" must be a command, or an object with mac, windows and linux commands")
+	}
+	*o = m
+	return nil
+}
+
+// For returns the command for an operating system (a GOOS value), or "".
+func (o OSCommands) For(goos string) string {
+	keys := []string{goos}
+	if goos == "darwin" {
+		keys = append(keys, "mac", "macos")
+	}
+	for _, k := range append(keys, "all") {
+		if v := o[k]; v != "" {
+			return v
+		}
+	}
+	return ""
 }

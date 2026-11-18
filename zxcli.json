@@ -157,13 +157,14 @@
     },
     {
       "name": "doctor",
-      "summary": "Check that this machine has your dev tools",
+      "summary": "Check that this machine has what you and the project need, and install what is missing",
       "usage": "zx doctor [flags]",
       "group": "Workspace",
       "examples": [
         "zx doctor",
-        "zx doctor --strict",
-        "zx doctor --json"
+        "zx doctor --fix",
+        "zx doctor --trust",
+        "zx doctor --strict --json"
       ]
     },
     {

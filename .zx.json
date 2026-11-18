@@ -5,4 +5,10 @@
     { "name": "check", "summary": "lint and test before pushing", "run": "make check" },
     { "name": "rebuild", "summary": "build and install this checkout", "run": "make install" },
   ],
+  // What you need to work on zx. Check it with: zx doctor
+  "doctor": [
+    "git",
+    { "tool": "go", "min": "1.22" },
+    "make",
+  ],
 }

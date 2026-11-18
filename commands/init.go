@@ -218,12 +218,14 @@ jobs:
       - uses: actions/checkout@v7
 `
 
-func initZX(check string) string {
-	return `// Project commands. Run "zx" in this folder to see them.
+func initZX(check, doctor string) string {
+	return `// Project commands and requirements. Run "zx" in this folder to see the
+// commands, and "zx doctor" to check that this machine can build it.
 {
   "commands": [
     { "name": "check", "summary": "lint and test before pushing", "run": "` + check + `" },
   ],
+  "doctor": [` + doctor + `],
 }
 `
 }
@@ -249,7 +251,7 @@ check: lint test ## Lint and test: run this before pushing
           cache: false
       - run: make check
 `,
-		zx: initZX("make check"),
+		zx: initZX("make check", `"git", "go", "make"`),
 	},
 	"dotnet": {
 		gitignore: "bin/\nobj/\n.vs/\n*.user\nTestResults/\n",
@@ -269,7 +271,7 @@ check: lint test ## Lint and test: run this before pushing
           dotnet-version: 10.0.x
       - run: make check
 `,
-		zx: initZX("make check"),
+		zx: initZX("make check", `"git", { "tool": "dotnet", "min": "10.0" }, "make"`),
 	},
 	"node": {
 		gitignore: "node_modules/\ndist/\nbuild/\ncoverage/\n.next/\n",
@@ -290,11 +292,11 @@ check: lint test ## Lint and test: run this before pushing
       - run: npm ci
       - run: make check
 `,
-		zx: initZX("make check"),
+		zx: initZX("make check", `"git", "node", "npm", "make"`),
 	},
 	"plain": {
 		gitignore: "",
-		zx:        initZX("echo nothing to check yet"),
+		zx:        initZX("echo nothing to check yet", `"git"`),
 	},
 }
 

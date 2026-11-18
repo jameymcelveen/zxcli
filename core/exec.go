@@ -38,6 +38,18 @@ func shellCmd(s Script, args []string) *exec.Cmd {
 	return cmd
 }
 
+// ShellCommand builds a process that runs one shell line in dir ("" means the
+// current directory): sh -c on macOS and Linux, cmd /C on Windows.
+func ShellCommand(line, dir string) *exec.Cmd {
+	return shellCmd(Script{Run: line, Dir: dir}, nil)
+}
+
+// RunCommand runs cmd with the given streams. A non-zero exit comes back as
+// an *ExitError.
+func RunCommand(cmd *exec.Cmd, stdin io.Reader, stdout, stderr io.Writer) error {
+	return runCmd(cmd, stdin, stdout, stderr)
+}
+
 func runCmd(cmd *exec.Cmd, stdin io.Reader, stdout, stderr io.Writer) error {
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = stdin, stdout, stderr
 	err := cmd.Run()

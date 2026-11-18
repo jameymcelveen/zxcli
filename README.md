@@ -58,7 +58,7 @@ The installers are not code-signed. macOS asks you to confirm the `.pkg` (right-
 | `zx hash` | SHA-256 (or `-a md5`, `sha1`, `sha512`) of files, text or stdin |
 | `zx repos` | Which git repos under `~/dev` have uncommitted, unpushed or unfetched work |
 | `zx init` | Starter files for a project: `.editorconfig`, `.gitignore`, MIT license, Makefile, CI workflow, `.zx.json` |
-| `zx doctor` | Check that a machine has your dev tools, with versions |
+| `zx doctor` | Check that a machine has what you and the project need, and `--fix` to install what is missing |
 | `zx port` | What is listening on a port, and `-k` to stop it |
 | `zx ip` | Local IP addresses |
 | `zx serve` | Serve a folder over HTTP: `zx serve ./dist -p 3000` |
@@ -147,6 +147,58 @@ The manifest entry supplies everything help needs:
 ```
 
 A test fails the build if the two ever disagree: a registered command with no manifest entry, an entry with no code, or a name used twice. Set `"disabled": true` on an entry to switch a built-in off without deleting it.
+
+## zx doctor
+
+`zx doctor` answers one question: can this machine do the work? It checks two lists and reports them separately.
+
+- **This machine:** the `"doctor"` list in your own config. With no list, it checks a default set (git, gh, go, dotnet, node, npm, python3, docker, make).
+- **This project:** the `"doctor"` list in the nearest `.zx.json`. A project's entry for a tool replaces your machine's entry for the same tool.
+
+```jsonc
+// .zx.json
+{
+  "doctor": [
+    "git",
+    { "tool": "dotnet", "min": "10.0" },
+    { "tool": "terraform",
+      "install": { "mac": "brew install terraform", "windows": "winget install -e --id Hashicorp.Terraform" } },
+    { "name": "database is up", "run": "pg_isready -q", "install": "docker compose up -d db" },
+    { "name": "API key is set", "run": "test -n \"$API_KEY\"" }
+  ]
+}
+```
+
+```console
+$ zx doctor
+This machine  ~/.config/zx/zxcli.json
+ok       git           2.50.1    /usr/bin/git
+ok       gh signed in
+
+This project  ~/dev/api/.zx.json
+too old  dotnet        9.0.100 (needs 10.0+)
+missing  terraform     not installed
+failed   database is up
+
+3 of 5 checks need attention
+
+Fixes  run them all with: zx doctor --fix
+  brew upgrade --cask dotnet-sdk
+  brew install terraform
+  docker compose up -d db
+```
+
+A check is either a **tool** (with an optional minimum version) or a **named command** that must exit 0. `install` and `upgrade` are one command for every OS, or one each for `mac`, `windows` and `linux`. For common tools zx already knows the command for Homebrew, winget and apt, so most entries need no `install` line.
+
+| | |
+| --- | --- |
+| `zx doctor` | Report only. It installs nothing. |
+| `zx doctor --fix` | Show every install command, ask once, run them, then check again. `--yes` skips the question. |
+| `zx doctor --trust` | Approve a project's custom `run` checks. |
+| `zx doctor --strict` | Exit 1 if anything needs attention, for CI or a setup script. |
+| `zx doctor --json` | The report as JSON. |
+
+A project's `.zx.json` is written by whoever wrote the repo, so zx is careful with it. Its custom `run` checks are shown as `skipped` until you approve them with `--trust`, and they need approving again whenever they change. Install commands never run without `--fix`, and `--fix` always prints them first.
 
 ## Shell completion
 
