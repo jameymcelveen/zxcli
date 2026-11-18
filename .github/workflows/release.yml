@@ -17,8 +17,8 @@ jobs:
     name: build archives, deb, rpm, Windows setup
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: stable
       - run: sudo apt-get update && sudo apt-get install -y nsis
@@ -39,8 +39,8 @@ jobs:
     name: build and test the macOS pkg
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: stable
       - run: make pkg VERSION="$VERSION"
@@ -101,7 +101,7 @@ jobs:
     needs: [build, macos, test-linux, test-windows]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v4
         with:
           path: dist
@@ -123,7 +123,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: install.sh
         if: runner.os != 'Windows'
         run: |
