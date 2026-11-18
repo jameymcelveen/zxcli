@@ -135,6 +135,9 @@ func globalTargets(cfg core.Config) map[string]string {
 			targets[name] = "zx " + exp
 		} else if s, ok := cfg.Script(name); ok {
 			targets[name] = s.Run
+			if s.File != "" {
+				targets[name] = s.File
+			}
 		}
 	}
 	return targets

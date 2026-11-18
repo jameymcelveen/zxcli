@@ -145,6 +145,11 @@ globals:
 		return Usagef("unknown flag %s", args[0])
 	}
 	name, rest := args[0], args[1:]
+	// A sentence where a command name should be is a request for the AI:
+	// zx "bump the version and tag the repo"
+	if strings.ContainsAny(strings.TrimSpace(name), " \t\n") {
+		name, rest = "__ask", args
+	}
 	if expansion, ok := a.Config.Aliases[name]; ok {
 		if f := strings.Fields(expansion); len(f) > 0 {
 			name, rest = f[0], append(f[1:], rest...)
@@ -197,7 +202,11 @@ func (a *App) route(name string, args []string, out io.Writer) error {
 		return handlers[m.Name](&Context{App: a, Meta: m, Args: args, Stdin: a.Stdin, Stdout: out, Stderr: a.Stderr})
 	}
 	if s, ok := a.Config.Script(name); ok {
-		return runCmd(shellCmd(s, args), a.Stdin, out, a.Stderr)
+		cmd, err := scriptCmd(s, args)
+		if err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+		return runCmd(cmd, a.Stdin, out, a.Stderr)
 	}
 	if path, err := exec.LookPath("zx-" + name); err == nil {
 		return runCmd(exec.Command(path, args...), a.Stdin, out, a.Stderr)
@@ -246,6 +255,9 @@ func (a *App) Help(w io.Writer) {
 		fmt.Fprintln(w, a.Manifest.Tagline)
 	}
 	fmt.Fprintf(w, "\n%s\n  zx <command> [arguments] [--copy]\n", a.Bold("Usage"))
+	if _, ok := a.index["__ask"]; ok {
+		fmt.Fprintf(w, "  zx \"say what you want done\"   %s\n", a.Dim("the AI writes a script, shows it, and asks before running"))
+	}
 
 	var groups []string
 	byGroup := map[string][]Item{}
@@ -274,7 +286,7 @@ func (a *App) Help(w io.Writer) {
 		note(g, m.Name, s)
 	}
 	for _, s := range a.Config.Project {
-		note("Project commands  "+a.Config.ProjectPath, s.Name, s.describe())
+		note("Project commands  "+a.Config.ProjectDir, s.Name, s.describe())
 	}
 	for _, s := range a.Config.User {
 		summary := s.describe()
@@ -321,7 +333,14 @@ func (a *App) HelpFor(name string, w io.Writer) error {
 	}
 	if s, ok := a.Config.Script(name); ok {
 		fmt.Fprintf(w, "%s  %s\n\n", a.Bold("zx "+s.Name), s.Summary)
-		fmt.Fprintf(w, "%s\n  %s\n\n%s\n  %s\n", a.Bold("Runs"), s.Run, a.Bold("Defined in"), s.Source)
+		runs := s.Run
+		if s.File != "" {
+			runs = s.File
+			if runner, err := FileRunner(s.File); err == nil {
+				runs = strings.Join(runner, " ") + " " + s.File
+			}
+		}
+		fmt.Fprintf(w, "%s\n  %s\n\n%s\n  %s\n", a.Bold("Runs"), runs, a.Bold("Defined in"), s.Source)
 		return nil
 	}
 	if exp, ok := a.Config.Aliases[name]; ok {

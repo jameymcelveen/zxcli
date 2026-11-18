@@ -10,6 +10,7 @@ $ zx guid --copy          # any command can put its output on the clipboard
 $ zx now 1700000000       # epoch -> local, UTC and ISO time
 $ zx port 3000 -k         # see what is on port 3000 and stop it
 $ curl -s api.example.com | zx json
+$ zx new "bump the version, update the readme, tag the repo"   # the AI writes the command
 ```
 
 Run `zx` on its own to see every command, and `zx help <command>` for details.
@@ -65,6 +66,7 @@ The installers are not code-signed. macOS asks you to confirm the `.pkg` (right-
 | `zx clip`, `zx paste` | The clipboard as a pipe, the same on every OS: `zx paste \| zx json \| zx clip` |
 | `zx upgrade` | Update zx to the latest release, verified against its checksums |
 | `zx global` | Make your aliases and commands runnable without the `zx` prefix |
+| `zx ai` | Choose which AI writes commands for you |
 | `zx config` | Show, create (`init`) or edit your config |
 | `zx completion` | Shell completion for bash, zsh, fish and PowerShell |
 
@@ -74,7 +76,53 @@ Text commands take their input as arguments or from a pipe. `--copy` works on ev
 
 ## Make it yours
 
-There are four ways to add a command. Pick the lightest one that does the job.
+There are five ways to add a command. Pick the lightest one that does the job.
+
+### 0. Describe it, and let the AI write it
+
+```console
+$ zx new "bump the version, update the readme, tag the repo"
+asking claude...
+? Patch, minor or major by default?
+> patch
+
+zx bump  Bump the version, update the README and tag the repo  (sh, 31 lines)
+------------------------------------------------------------
+#!/bin/sh
+...
+------------------------------------------------------------
+Save it as zx bump? [y/N] y
+saved .zx/commands/bump.sh
+read it over, then run it with: zx bump
+```
+
+For a one-off job, skip the name and just say it:
+
+```console
+$ zx "rename every .jpeg in this folder to .jpg"
+...the script is shown...
+Run it now? [y/N]
+It worked. Save it as zx fix-jpegs for next time? [y/N/never]
+```
+
+- **You choose the AI.** `zx ai` shows what is installed (Claude Code, Ollama, an Anthropic API key, or your own command) and remembers your pick for the machine, or with `--local` for one project. The first AI command asks if you have not picked yet. `zx ai test` checks that it answers.
+- **zx always shows the script first.** `zx new` saves and never runs. A sentence runs only after you answer yes, every time. `never` turns off the offer to save, not the question about running.
+- **What is sent:** your request, the names of the files in the current folder, and your command names. File contents are not sent, and zx stores no keys.
+- **It is still a script someone else wrote.** Read it before you run it, the same as you would a script from the internet.
+
+### Script files
+
+A generated command is an ordinary file, and you can write them by hand too. Any script in `.zx/commands/` (for a project) or `~/.config/zx/commands/` (for you) is a command named after the file:
+
+| File | Runs with |
+| --- | --- |
+| `deploy.sh` | `sh` (bash from Git for Windows on Windows) |
+| `report.js` | Node.js, Bun or Deno |
+| `sync.ts` | Bun, Deno, tsx, or Node.js 23.6 or newer |
+| `clean.py` | `python3` |
+| `setup.ps1` | PowerShell |
+
+Put `# summary: what it does` (or `// summary:`) near the top and it shows in `zx` help. Project scripts run from the project root. If the tool for a file type is not installed, zx says which one is needed.
 
 ### 1. Your own commands and aliases (no code)
 

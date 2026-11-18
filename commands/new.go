@@ -70,14 +70,30 @@ func runNew(c *core.Context) error {
 	fs := c.Flags()
 	summary := fs.String("s", "", "one-line `summary` shown in help")
 	group := fs.String("g", "Commands", "help `group` to list it under")
+	useAI := fs.Bool("ai", false, "have the AI write the command from your description")
+	forUser := fs.Bool("user", false, "with a description: save it for you everywhere, not for this project")
+	forProject := fs.Bool("project", false, "with a description: save it in this folder's .zx/commands")
+	yes := fs.Bool("yes", false, "with a description: save without asking")
 	pos, err := c.Parse(fs)
 	if err != nil {
 		return err
 	}
-	if len(pos) != 1 {
-		return core.Usagef("give the new command a name: zx new dice")
+	// A description instead of a name means "write it for me":
+	// zx new "bump the version and tag the repo"
+	if request := strings.TrimSpace(strings.Join(pos, " ")); request != "" && (*useAI || strings.ContainsAny(request, " \t")) {
+		scope := ""
+		switch {
+		case *forUser:
+			scope = "user"
+		case *forProject:
+			scope = "project"
+		}
+		return aiNew(c, request, scope, *yes)
 	}
-	cwd, err := os.Getwd()
+	if len(pos) != 1 {
+		return core.Usagef("give the new command a name (zx new dice), or describe it (zx new \"roll two dice\")")
+	}
+	cwd, err := workDir()
 	if err != nil {
 		return err
 	}

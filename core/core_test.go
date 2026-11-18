@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -375,5 +376,137 @@ func TestShellLinesKeepTheirQuotes(t *testing.T) {
 	}
 	if err := RunCommand(ShellCommand("exit 5", dir), strings.NewReader(""), out, out); err == nil {
 		t.Error("a failing line should report its exit status")
+	}
+}
+
+func TestCommandFilesAndProjectRoot(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("ZX_CONFIG", filepath.Join(home, "zxcli.json"))
+	root := t.TempDir()
+	deep := filepath.Join(root, "src", "pkg")
+	writeFile(t, filepath.Join(deep, "x.txt"), "")
+
+	// A .zx folder alone marks the project root; no .zx.json is needed.
+	if got := FindProjectRoot(deep); got != "" {
+		t.Fatalf("no project yet, got %q", got)
+	}
+	writeFile(t, filepath.Join(root, ".zx", "commands", "hello.js"), "// summary: Say hello from a file\nconsole.log('hello ' + process.argv.slice(2).join(' ') + ' from ' + process.cwd());\n")
+	writeFile(t, filepath.Join(root, ".zx", "commands", "notes.txt"), "not a command")
+	writeFile(t, filepath.Join(root, ".zx", "commands", "bad name.sh"), "echo no")
+	writeFile(t, filepath.Join(home, "commands", "mine.sh"), "#!/bin/sh\n# summary: A user command\necho mine\n")
+	if got := FindProjectRoot(deep); got != root {
+		t.Fatalf("FindProjectRoot = %q, want %q", got, root)
+	}
+
+	cfg, warnings := LoadConfig(deep)
+	if len(warnings) > 0 {
+		t.Fatalf("warnings: %v", warnings)
+	}
+	if cfg.ProjectDir != root || cfg.ProjectPath != "" {
+		t.Errorf("ProjectDir = %q, ProjectPath = %q", cfg.ProjectDir, cfg.ProjectPath)
+	}
+	if len(cfg.Project) != 1 || cfg.Project[0].Name != "hello" || cfg.Project[0].Summary != "Say hello from a file" || cfg.Project[0].Dir != root {
+		t.Fatalf("project commands = %+v", cfg.Project)
+	}
+	if len(cfg.User) != 1 || cfg.User[0].Name != "mine" || cfg.User[0].Summary != "A user command" || cfg.User[0].Dir != "" {
+		t.Fatalf("user commands = %+v", cfg.User)
+	}
+
+	app, out, _ := testApp(t)
+	if err := app.SetConfig(cfg); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.Dispatch(nil); err != nil || !strings.Contains(out.String(), "Say hello from a file") || !strings.Contains(out.String(), "A user command") {
+		t.Errorf("help should list file commands with their summaries: %v\n%s", err, out.String())
+	}
+	if _, err := exec.LookPath("node"); err == nil {
+		out.Reset()
+		if err := app.Dispatch([]string{"hello", "big", "world"}); err != nil {
+			t.Fatal(err)
+		}
+		realRoot, _ := filepath.EvalSymlinks(root)
+		if got := strings.TrimSpace(out.String()); got != "hello big world from "+realRoot && got != "hello big world from "+root {
+			t.Errorf("file command printed %q", got)
+		}
+	}
+	if runtime.GOOS != "windows" {
+		out.Reset()
+		if err := app.Dispatch([]string{"mine"}); err != nil || out.String() != "mine\n" {
+			t.Errorf("user sh command: %v %q", err, out.String())
+		}
+	}
+
+	// A config entry with the same name wins over a file.
+	writeFile(t, filepath.Join(root, ProjectFile), `{ "commands": [ { "name": "hello", "run": "echo from-config" } ] }`)
+	cfg, _ = LoadConfig(deep)
+	if s, _ := cfg.Script("hello"); s.Run != "echo from-config" || len(cfg.Project) != 1 {
+		t.Errorf("config should win: %+v", cfg.Project)
+	}
+}
+
+func TestFileRunnerReportsWhatIsMissing(t *testing.T) {
+	old := LookPath
+	defer func() { LookPath = old }()
+	LookPath = func(string) (string, error) { return "", errors.New("not found") }
+	for file, want := range map[string]string{"a.ts": "TypeScript", "a.js": "Node.js", "a.py": "python3", "a.ps1": "pwsh", "a.rb": "does not know"} {
+		if _, err := FileRunner(file); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("FileRunner(%s) = %v, want a message about %q", file, err, want)
+		}
+	}
+	LookPath = func(name string) (string, error) {
+		if name == "bun" || name == "pwsh" {
+			return "/x/" + name, nil
+		}
+		return "", errors.New("not found")
+	}
+	if got, err := FileRunner("a.ts"); err != nil || strings.Join(got, " ") != "bun run" {
+		t.Errorf("ts with bun: %v %v", got, err)
+	}
+	if got, err := FileRunner("a.PS1"); err != nil || got[0] != "pwsh" || got[len(got)-1] != "-File" {
+		t.Errorf("ps1: %v %v", got, err)
+	}
+	if langs := Languages(); !reflect.DeepEqual(langs, []string{"sh", "ps1", "js", "ts"}) && runtime.GOOS != "windows" {
+		t.Errorf("Languages() = %v", langs)
+	}
+}
+
+func TestSettingsFilesLayerOverConfig(t *testing.T) {
+	home, root := t.TempDir(), t.TempDir()
+	t.Setenv("ZX_CONFIG", filepath.Join(home, "zxcli.json"))
+	writeFile(t, filepath.Join(home, "zxcli.json"), `{ "settings": { "a": "config", "b": "config", "c": "config", "d": "config" } }`)
+	writeFile(t, filepath.Join(root, ProjectFile), `{ "settings": { "c": "project-config", "d": "project-config" } }`)
+	if err := SaveSetting(UserSettingsPath(), "b", "user-saved"); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveSetting(UserSettingsPath(), "c", "user-saved"); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveSetting(ProjectSettingsPath(root), "d", "project-saved"); err != nil {
+		t.Fatal(err)
+	}
+	cfg, _ := LoadConfig(root)
+	want := map[string]string{"a": "config", "b": "user-saved", "c": "project-config", "d": "project-saved"}
+	if !reflect.DeepEqual(cfg.Settings, want) {
+		t.Errorf("settings = %v\nwant %v", cfg.Settings, want)
+	}
+	// Saving never touches the hand-written config, and "" removes a key.
+	if data, _ := os.ReadFile(filepath.Join(home, "zxcli.json")); !strings.Contains(string(data), `"a": "config"`) {
+		t.Error("the config file was rewritten")
+	}
+	if err := SaveSetting(UserSettingsPath(), "b", ""); err != nil {
+		t.Fatal(err)
+	}
+	if got := ReadSettings(UserSettingsPath()); got["b"] != "" || got["c"] != "user-saved" {
+		t.Errorf("after removing b: %v", got)
+	}
+}
+
+func TestSentencesGoToTheAI(t *testing.T) {
+	app, _, _ := testApp(t)
+	// The test binary has no AI command, so the sentence shows up as the
+	// hidden "__ask" command being unknown rather than as a typo of "echo".
+	err := app.Dispatch([]string{"echo the time please"})
+	if err == nil || !strings.Contains(err.Error(), "__ask") {
+		t.Errorf("a sentence should be routed to __ask, got %v", err)
 	}
 }

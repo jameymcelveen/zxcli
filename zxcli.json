@@ -236,6 +236,18 @@
       ]
     },
     {
+      "name": "ai",
+      "summary": "Choose which AI writes commands for you",
+      "usage": "zx ai [pick | use <name> | test | off] [flags]",
+      "group": "zx",
+      "examples": [
+        "zx ai",
+        "zx ai use claude",
+        "zx ai use ollama --model llama3.2 --local",
+        "zx ai test"
+      ]
+    },
+    {
       "name": "global",
       "summary": "Make your aliases and commands runnable without the zx prefix",
       "usage": "zx global [sync | path] [flags]",
@@ -248,10 +260,12 @@
     },
     {
       "name": "new",
-      "summary": "Scaffold a new built-in command (run inside the zxcli repo)",
-      "usage": "zx new <name> [flags]",
+      "summary": "Create a command: describe it and the AI writes it, or name it to scaffold Go",
+      "usage": "zx new \"<what it should do>\" | zx new <name> [flags]",
       "group": "zx",
       "examples": [
+        "zx new \"bump the version, update the readme, tag the repo\"",
+        "zx new \"open the staging logs\" --user",
         "zx new dice -s \"Roll some dice\" -g Generate"
       ]
     },
@@ -289,6 +303,11 @@
     {
       "name": "__complete",
       "summary": "List command names for shell completion",
+      "hidden": true
+    },
+    {
+      "name": "__ask",
+      "summary": "Write and run a one-off script from a sentence",
       "hidden": true
     }
   ]

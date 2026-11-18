@@ -23,13 +23,17 @@ type Script struct {
 	Run     string `json:"run"`
 	Global  bool   `json:"global,omitempty"` // also runnable without the "zx" prefix
 
+	File   string `json:"-"` // script file to run, for commands that live in a commands folder
 	Dir    string `json:"-"` // working directory; empty means the current one
 	Source string `json:"-"` // file the script was defined in
 }
 
 func (s Script) describe() string {
-	if s.Summary != "" {
+	switch {
+	case s.Summary != "":
 		return s.Summary
+	case s.File != "":
+		return filepath.Base(s.File)
 	}
 	return s.Run
 }
@@ -55,6 +59,7 @@ type Config struct {
 	Global        map[string]bool // aliases and commands marked "global": true in the user config
 	UserPath      string          // where the user config lives (it may not exist yet)
 	ProjectPath   string          // empty when no .zx.json was found
+	ProjectDir    string          // the project root: the folder with .zx.json or .zx; empty when none
 }
 
 // Setting returns a value from the "settings" block, or def when it is unset.
@@ -193,12 +198,46 @@ func LoadConfig(cwd string) (Config, []string) {
 		}
 	}
 
-	if cfg.UserPath != "" {
-		load(cfg.UserPath, false)
+	// Script files in a commands folder become commands too. An entry in the
+	// config file with the same name wins.
+	addFiles := func(dir, runIn string, project bool) {
+		for _, s := range loadCommandFiles(dir) {
+			s.Dir = runIn
+			list := &cfg.User
+			if project {
+				list = &cfg.Project
+			}
+			taken := false
+			for _, have := range *list {
+				taken = taken || have.Name == s.Name
+			}
+			if !taken {
+				*list = append(*list, s)
+			}
+		}
 	}
-	if p := FindProjectConfig(cwd); p != "" && p != cfg.UserPath {
-		cfg.ProjectPath = p
-		load(p, true)
+
+	userDir := ""
+	if cfg.UserPath != "" {
+		userDir = filepath.Dir(cfg.UserPath)
+		load(cfg.UserPath, false)
+		for k, v := range ReadSettings(filepath.Join(userDir, "settings.json")) {
+			cfg.Settings[k] = v
+		}
+		addFiles(filepath.Join(userDir, "commands"), "", false)
+	}
+	if root := FindProjectRoot(cwd); root != "" && root != userDir {
+		cfg.ProjectDir = root
+		if p := filepath.Join(root, ProjectFile); p != cfg.UserPath {
+			if st, err := os.Stat(p); err == nil && !st.IsDir() {
+				cfg.ProjectPath = p
+				load(p, true)
+			}
+		}
+		for k, v := range ReadSettings(ProjectSettingsPath(root)) {
+			cfg.Settings[k] = v
+		}
+		addFiles(filepath.Join(root, ProjectDirName, "commands"), root, true)
 	}
 	return cfg, warnings
 }
