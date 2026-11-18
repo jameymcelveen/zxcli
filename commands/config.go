@@ -32,6 +32,12 @@ const StarterConfig = `// zx user config. Comments and trailing commas are fine 
 
   // Built-in commands you want hidden, for example ["lorem"].
   "disabled": [],
+
+  // Options for individual commands.
+  "settings": {
+    // "repos.dir": "~/dev",                  // where "zx repos" looks
+    // "doctor.tools": "git, gh, go, dotnet", // what "zx doctor" checks
+  },
 }
 `
 

@@ -52,7 +52,8 @@
         "zx now",
         "zx now 1700000000",
         "zx now 2026-11-18T10:00:00Z",
-        "zx now -f epoch --copy"
+        "zx now -f epoch --copy",
+        "zx now --json"
       ]
     },
     {
@@ -132,6 +133,40 @@
       ]
     },
     {
+      "name": "repos",
+      "summary": "Show which git repos have uncommitted or unpushed work",
+      "usage": "zx repos [folder] [flags]",
+      "group": "Workspace",
+      "examples": [
+        "zx repos",
+        "zx repos ~/work -a",
+        "zx repos --fetch",
+        "zx repos --json"
+      ]
+    },
+    {
+      "name": "init",
+      "summary": "Add the standard starter files to a project",
+      "usage": "zx init [folder] [flags]",
+      "group": "Workspace",
+      "examples": [
+        "zx init",
+        "zx init my-api --kind dotnet",
+        "zx init --dry-run"
+      ]
+    },
+    {
+      "name": "doctor",
+      "summary": "Check that this machine has your dev tools",
+      "usage": "zx doctor [flags]",
+      "group": "Workspace",
+      "examples": [
+        "zx doctor",
+        "zx doctor --strict",
+        "zx doctor --json"
+      ]
+    },
+    {
       "name": "port",
       "summary": "Show what is listening on a port, and stop it",
       "usage": "zx port [number] [flags]",
@@ -139,7 +174,8 @@
       "examples": [
         "zx port",
         "zx port 3000",
-        "zx port 3000 -k"
+        "zx port 3000 -k",
+        "zx port --json"
       ]
     },
     {
@@ -149,7 +185,8 @@
       "group": "System",
       "examples": [
         "zx ip",
-        "zx ip -1 --copy"
+        "zx ip -1 --copy",
+        "zx ip --json"
       ]
     },
     {
@@ -161,6 +198,29 @@
         "zx serve",
         "zx serve ./dist -p 3000",
         "zx serve --lan"
+      ]
+    },
+    {
+      "name": "clip",
+      "summary": "Copy text or stdin to the clipboard",
+      "usage": "zx clip [text] [flags]",
+      "group": "System",
+      "aliases": [
+        "copy"
+      ],
+      "examples": [
+        "zx clip hello",
+        "cat id_ed25519.pub | zx clip"
+      ]
+    },
+    {
+      "name": "paste",
+      "summary": "Print the clipboard",
+      "usage": "zx paste",
+      "group": "System",
+      "examples": [
+        "zx paste | zx json",
+        "zx paste > notes.txt"
       ]
     },
     {
@@ -190,6 +250,16 @@
       "group": "zx",
       "examples": [
         "zx completion zsh > ~/.zsh/completions/_zx"
+      ]
+    },
+    {
+      "name": "upgrade",
+      "summary": "Update zx to the latest release",
+      "usage": "zx upgrade [flags]",
+      "group": "zx",
+      "examples": [
+        "zx upgrade",
+        "zx upgrade --check"
       ]
     },
     {

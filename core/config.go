@@ -37,16 +37,26 @@ type configFile struct {
 	Aliases  map[string]string `json:"aliases"`
 	Commands []Script          `json:"commands"`
 	Disabled []string          `json:"disabled"`
+	Settings map[string]string `json:"settings"`
 }
 
 // Config is the merged user and project configuration.
 type Config struct {
 	Aliases     map[string]string
 	Disabled    map[string]bool
+	Settings    map[string]string // free-form options read by individual commands
 	User        []Script
 	Project     []Script
 	UserPath    string // where the user config lives (it may not exist yet)
 	ProjectPath string // empty when no .zx.json was found
+}
+
+// Setting returns a value from the "settings" block, or def when it is unset.
+func (c Config) Setting(key, def string) string {
+	if v, ok := c.Settings[key]; ok && v != "" {
+		return v
+	}
+	return def
 }
 
 // Script looks up a script command. Project scripts win over user scripts.
@@ -103,7 +113,7 @@ var scriptName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.:-]*$`)
 // LoadConfig reads the user config and the nearest project config. Problems
 // are returned as warnings so a broken config never locks the user out.
 func LoadConfig(cwd string) (Config, []string) {
-	cfg := Config{Aliases: map[string]string{}, Disabled: map[string]bool{}, UserPath: UserConfigPath()}
+	cfg := Config{Aliases: map[string]string{}, Disabled: map[string]bool{}, Settings: map[string]string{}, UserPath: UserConfigPath()}
 	var warnings []string
 
 	load := func(path string, project bool) {
@@ -124,6 +134,9 @@ func LoadConfig(cwd string) (Config, []string) {
 		}
 		for _, d := range f.Disabled {
 			cfg.Disabled[d] = true
+		}
+		for k, v := range f.Settings {
+			cfg.Settings[k] = v
 		}
 		for _, s := range f.Commands {
 			if !scriptName.MatchString(s.Name) || s.Run == "" {

@@ -14,6 +14,7 @@ func init() { core.Register("now", runNow) }
 func runNow(c *core.Context) error {
 	fs := c.Flags()
 	field := fs.String("f", "", "print one `field` only: local, utc, iso, epoch or millis")
+	asJSON := fs.Bool("json", false, "print JSON")
 	pos, err := c.Parse(fs)
 	if err != nil {
 		return err
@@ -25,6 +26,12 @@ func runNow(c *core.Context) error {
 		}
 	}
 	rows := whenRows(t, time.Local)
+	if *asJSON {
+		return c.JSON(map[string]any{
+			"local": rows[0][1], "utc": rows[1][1], "iso": rows[2][1],
+			"epoch": t.Unix(), "millis": t.UnixMilli(),
+		})
+	}
 	if *field != "" {
 		for _, r := range rows {
 			if r[0] == *field {

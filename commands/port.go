@@ -18,15 +18,16 @@ func init() { core.Register("port", runPort) }
 
 // Listener is one process listening on a TCP port.
 type Listener struct {
-	Port int
-	PID  int
-	Proc string
-	User string
+	Port int    `json:"port"`
+	PID  int    `json:"pid"`
+	Proc string `json:"process"`
+	User string `json:"user,omitempty"`
 }
 
 func runPort(c *core.Context) error {
 	fs := c.Flags()
 	kill := fs.Bool("k", false, "stop the process listening on the port")
+	asJSON := fs.Bool("json", false, "print JSON")
 	pos, err := c.Parse(fs)
 	if err != nil {
 		return err
@@ -50,6 +51,13 @@ func runPort(c *core.Context) error {
 			found = append(found, l)
 		}
 	}
+	sort.Slice(found, func(i, j int) bool { return found[i].Port < found[j].Port })
+	if *asJSON && !*kill {
+		if found == nil {
+			found = []Listener{}
+		}
+		return c.JSON(found)
+	}
 	if len(found) == 0 {
 		if want != 0 {
 			c.Printf("nothing is listening on port %d\n", want)
@@ -58,7 +66,6 @@ func runPort(c *core.Context) error {
 		}
 		return nil
 	}
-	sort.Slice(found, func(i, j int) bool { return found[i].Port < found[j].Port })
 	if !*kill {
 		userWidth := len("USER")
 		for _, l := range found {

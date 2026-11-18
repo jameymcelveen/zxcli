@@ -113,3 +113,33 @@ func Copy(text string) error {
 	}
 	return errors.New("no clipboard tool found (install wl-clipboard, xclip or xsel)")
 }
+
+// Paste returns the text on the system clipboard.
+func Paste() (string, error) {
+	var candidates [][]string
+	switch runtime.GOOS {
+	case "darwin":
+		candidates = [][]string{{"pbpaste"}}
+	case "windows":
+		candidates = [][]string{{"powershell", "-NoProfile", "-Command", "Get-Clipboard -Raw"}}
+	default:
+		candidates = [][]string{
+			{"wl-paste", "--no-newline"},
+			{"xclip", "-selection", "clipboard", "-o"},
+			{"xsel", "--clipboard", "--output"},
+			{"powershell.exe", "-NoProfile", "-Command", "Get-Clipboard -Raw"}, // WSL
+		}
+	}
+	for _, c := range candidates {
+		path, err := exec.LookPath(c[0])
+		if err != nil {
+			continue
+		}
+		out, err := exec.Command(path, c[1:]...).Output()
+		if err != nil {
+			return "", err
+		}
+		return strings.ReplaceAll(string(out), "\r\n", "\n"), nil
+	}
+	return "", errors.New("no clipboard tool found (install wl-clipboard, xclip or xsel)")
+}

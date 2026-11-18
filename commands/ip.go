@@ -13,6 +13,7 @@ func runIP(c *core.Context) error {
 	fs := c.Flags()
 	first := fs.Bool("1", false, "print only the first IPv4 address")
 	v6 := fs.Bool("6", false, "include IPv6 addresses")
+	asJSON := fs.Bool("json", false, "print JSON")
 	if _, err := c.Parse(fs); err != nil {
 		return err
 	}
@@ -22,6 +23,17 @@ func runIP(c *core.Context) error {
 	}
 	if len(addrs) == 0 {
 		return errors.New("no network address found: are you offline?")
+	}
+	if *asJSON {
+		type addr struct {
+			Interface string `json:"interface"`
+			Address   string `json:"address"`
+		}
+		out := make([]addr, len(addrs))
+		for i, a := range addrs {
+			out[i] = addr{a[0], a[1]}
+		}
+		return c.JSON(out)
 	}
 	if *first {
 		c.Println(addrs[0][1])

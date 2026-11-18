@@ -3,6 +3,7 @@
 package core
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -143,3 +144,11 @@ func (c *Context) Printf(format string, a ...any) { fmt.Fprintf(c.Stdout, format
 
 // Println writes a line to stdout.
 func (c *Context) Println(a ...any) { fmt.Fprintln(c.Stdout, a...) }
+
+// JSON writes v to stdout as indented JSON. Commands use it for --json.
+func (c *Context) JSON(v any) error {
+	enc := json.NewEncoder(c.Stdout)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	return enc.Encode(v)
+}

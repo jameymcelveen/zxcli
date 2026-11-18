@@ -203,10 +203,12 @@ func TestLoadConfigMergesUserAndProject(t *testing.T) {
   "aliases": {"e": "echo -u", "shared": "echo user"},
   "commands": [{"name": "greet", "summary": "from user", "run": "echo user"}],
   "disabled": ["fail"],
+  "settings": {"repos.dir": "~/code", "shared": "user"},
 }`)
 	project := filepath.Join(dir, "work", "repo")
 	writeFile(t, filepath.Join(project, ProjectFile), `{
   "aliases": {"shared": "echo project"},
+  "settings": {"shared": "project"},
   "commands": [
     {"name": "greet", "run": "echo project"},
     {"name": "bad name", "run": "x"},
@@ -223,6 +225,9 @@ func TestLoadConfigMergesUserAndProject(t *testing.T) {
 	}
 	if cfg.Aliases["e"] != "echo -u" || cfg.Aliases["shared"] != "echo project" {
 		t.Errorf("aliases = %v", cfg.Aliases)
+	}
+	if cfg.Setting("repos.dir", "") != "~/code" || cfg.Setting("shared", "") != "project" || cfg.Setting("unset", "fallback") != "fallback" {
+		t.Errorf("settings = %v", cfg.Settings)
 	}
 	if !cfg.Disabled["fail"] {
 		t.Error("fail should be disabled")

@@ -56,13 +56,20 @@ The installers are not code-signed. macOS asks you to confirm the `.pkg` (right-
 | `zx json` | Pretty-print, minify (`-m`) or validate JSON |
 | `zx jwt` | Decode a JWT and show when it expires |
 | `zx hash` | SHA-256 (or `-a md5`, `sha1`, `sha512`) of files, text or stdin |
+| `zx repos` | Which git repos under `~/dev` have uncommitted, unpushed or unfetched work |
+| `zx init` | Starter files for a project: `.editorconfig`, `.gitignore`, MIT license, Makefile, CI workflow, `.zx.json` |
+| `zx doctor` | Check that a machine has your dev tools, with versions |
 | `zx port` | What is listening on a port, and `-k` to stop it |
 | `zx ip` | Local IP addresses |
 | `zx serve` | Serve a folder over HTTP: `zx serve ./dist -p 3000` |
+| `zx clip`, `zx paste` | The clipboard as a pipe, the same on every OS: `zx paste \| zx json \| zx clip` |
+| `zx upgrade` | Update zx to the latest release, verified against its checksums |
 | `zx config` | Show, create (`init`) or edit your config |
 | `zx completion` | Shell completion for bash, zsh, fish and PowerShell |
 
-Text commands take their input as arguments or from a pipe. `--copy` works on every command, including your own.
+Text commands take their input as arguments or from a pipe. `--copy` works on every command, including your own. `repos`, `doctor`, `port`, `now` and `ip` take `--json` for scripting.
+
+`zx init` detects Go, .NET and Node projects and never overwrites a file that is already there. `zx repos` only reads: it runs `git status` in each repo, and `git fetch` only when you pass `--fetch`.
 
 ## Make it yours
 
@@ -79,7 +86,11 @@ Run `zx config init` to create `~/.config/zx/zxcli.json` (`%AppData%\zx\zxcli.js
     { "name": "gs", "summary": "git status, short form", "run": "git status -sb" },
     { "name": "deploy", "summary": "ship it", "run": "./scripts/deploy.sh \"$1\"" }
   ],
-  "disabled": ["lorem"]
+  "disabled": ["lorem"],
+  "settings": {
+    "repos.dir": "~/dev",
+    "doctor.tools": "git, gh, go, dotnet, node, docker"
+  }
 }
 ```
 
