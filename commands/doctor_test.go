@@ -360,7 +360,7 @@ func TestDoctorSkippedAreCountedSeparately(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = app.Dispatch([]string{"doctor"})
-	if o := out.String(); !strings.Contains(o, "1 of ") || !strings.Contains(o, " checks need attention, 2 skipped (run zx doctor --trust)") {
+	if o := out.String(); !strings.Contains(o, " checks need attention, 2 skipped (run zx doctor --trust)") || !strings.Contains(o, "missing  zx-no-such-tool") {
 		t.Errorf("a missing tool is attention, unapproved checks are skipped:\n%s", out.String())
 	}
 }
