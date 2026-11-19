@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>zx — one command-line tool for everyday developer chores</title>
-<meta name="description" content="zx is a pluggable command-line toolbox written in Go: one small binary, no runtime, zero third-party dependencies. Installers for macOS, Windows and Linux.">
-<meta property="og:title" content="zx — a pluggable Go command-line toolbox">
-<meta property="og:description" content="One small binary. 27 commands, zero dependencies, AI-written commands, installers for macOS, Windows and Linux.">
+<title>zx doctor — one command makes your machine ready for the project</title>
+<meta name="description" content="zx doctor looks at a project, works out what it needs (.NET, React, Laravel, Go and more), shows what is missing and installs it. One small Go binary, no dependencies, for macOS, Windows and Linux.">
+<meta property="og:title" content="zx doctor — clone a project, run one command, start working">
+<meta property="og:description" content="zx doctor finds what a project needs and installs what is missing. One small Go binary with zero dependencies.">
 <meta property="og:url" content="https://zxcli.com/">
 <meta name="theme-color" content="#0c0e11">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230c0e11'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='17' font-weight='700' text-anchor='middle' fill='%2300add8'%3Ezx%3C/text%3E%3C/svg%3E">
@@ -77,6 +77,8 @@ section>p.intro{color:var(--dim);margin:0 0 24px;max-width:680px}
 .btn.main{background:var(--go);border-color:var(--go);color:#041218;font-weight:600}
 footer{border-top:1px solid var(--line);padding:26px 0 44px;color:var(--dim);font-size:13px}
 .fallback{color:var(--dim)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 0}
+.chips span{font:13px var(--mono);border:1px solid var(--line);background:var(--panel);color:var(--text);padding:4px 11px;border-radius:999px}
 @media (max-width:560px){.hero{padding-top:30px}nav .hide{display:none}}
 </style>
 </head>
@@ -85,6 +87,7 @@ footer{border-top:1px solid var(--line);padding:26px 0 44px;color:var(--dim);fon
   <nav>
     <span class="logo"><b>z</b>x</span>
     <span class="sp"></span>
+    <a href="#doctor" class="hide">Doctor</a>
     <a href="#commands" class="hide">Commands</a>
     <a href="#ai" class="hide">AI</a>
     <a href="#built">How it's built</a>
@@ -92,8 +95,8 @@ footer{border-top:1px solid var(--line);padding:26px 0 44px;color:var(--dim);fon
   </nav>
 
   <header class="hero">
-    <h1>One small binary for<br>every <span>developer chore</span>.</h1>
-    <p class="lead">zx is a pluggable command-line toolbox written in Go. <strong>No runtime, no dependencies.</strong> Generate GUIDs, decode JWTs, free a port, check a machine's setup, or describe a command in plain English and let an AI write it.</p>
+    <h1>Clone it.<br>Run <span>zx doctor</span>.<br>Start working.</h1>
+    <p class="lead">zx looks at a project, works out what it needs, shows what is missing and installs it. <strong>One small Go binary, no dependencies.</strong> It is also the toolbox you reach for every day.</p>
 
     <div class="tabs" role="tablist">
       <button class="tab" role="tab" aria-selected="true" data-os="unix">macOS / Linux</button>
@@ -108,14 +111,56 @@ footer{border-top:1px solid var(--line);padding:26px 0 44px;color:var(--dim);fon
     <div class="stats">
       <div class="stat"><b>27</b><span>commands, one file each</span></div>
       <div class="stat"><b>0</b><span>third-party dependencies</span></div>
-      <div class="stat"><b>88</b><span>test functions</span></div>
+      <div class="stat"><b>98</b><span>test functions</span></div>
       <div class="stat"><b>3</b><span>operating systems, 4 installers</span></div>
     </div>
   </header>
 
+  <section id="doctor">
+    <h2>zx doctor</h2>
+    <p class="intro">Point it at any project. It finds the stacks, checks your machine against them, and fixes what is missing, asking first.</p>
+    <div class="term"><div class="bar"><i></i><i></i><i></i></div>
+<pre><span class="p">$</span> zx doctor --discover
+Looked at ~/dev/shop
+Found:
+  laravel       <span class="c">composer.json requires laravel/framework</span>
+  react (web/)  <span class="c">package.json lists react</span>
+  docker        <span class="c">docker-compose.yml</span>
+
+<span class="k">Stack: laravel</span>
+<span class="g">ok</span>       php       8.4.1    <span class="c">/usr/local/bin/php</span>
+<span class="g">ok</span>       composer  2.8.3    <span class="c">/usr/local/bin/composer</span>
+<span class="p">missing</span>  vendor    not found
+<span class="p">missing</span>  .env      not found
+
+<span class="k">Stack: react</span>
+<span class="g">ok</span>       node      22.11.0  <span class="c">/usr/local/bin/node</span>
+<span class="p">missing</span>  web/node_modules  not found
+
+<span class="k">Suggested by AI</span>
+<span class="p">missing</span>  redis-server  not installed  <span class="c">(docker-compose.yml runs redis)</span>
+
+5 of 12 checks need attention
+
+<span class="p">$</span> zx doctor --fix
+<span class="c">composer install, cp .env.example .env, cd web &amp;&amp; npm install, brew install redis</span>
+Run these commands? [y/N] <span class="g">y</span>
+...
+everything checks out</pre>
+    </div>
+    <div class="chips" aria-label="Stacks zx doctor knows">
+      <span>.NET</span><span>React</span><span>Next.js</span><span>Vue</span><span>Angular</span><span>Node</span><span>Laravel</span><span>PHP</span><span>Python</span><span>Go</span><span>Rust</span><span>Java</span><span>Ruby</span><span>Rails</span><span>Docker</span><span>make</span>
+    </div>
+    <div class="cols" style="margin-top:22px">
+      <div class="note"><h3>Knows your stack</h3><p>Name it, <code>zx doctor laravel</code>, or let zx look at the folder with <code>zx doctor --discover</code>. It reads the versions your project asks for.</p></div>
+      <div class="note"><h3>Looks before it asks</h3><p>Discovery needs no AI. If you want more, zx shows exactly which files it would send first, and keeps secrets out.</p></div>
+      <div class="note"><h3>Fixes it, with your say-so</h3><p>Every install command is shown first and nothing runs until you say yes. Works the same on macOS, Windows and Linux.</p></div>
+    </div>
+  </section>
+
   <section id="demo">
     <h2>zx</h2>
-    <p class="intro">Every command takes arguments or a pipe, and every command can put its result on the clipboard with <code>--copy</code>.</p>
+    <p class="intro">And the everyday chores. Every command takes arguments or a pipe, and every command can put its result on the clipboard with <code>--copy</code>.</p>
     <div class="term"><div class="bar"><i></i><i></i><i></i></div>
 <pre><span class="p">$</span> zx guid
 <span class="g">3f2b8c1e-9d47-4a6b-8e21-5c0f7a9d1b34</span>
@@ -123,8 +168,7 @@ footer{border-top:1px solid var(--line);padding:26px 0 44px;color:var(--dim);fon
 <span class="p">$</span> zx now 1700000000          <span class="c"># epoch → local, UTC and ISO time</span>
 <span class="p">$</span> zx port 3000 -k            <span class="c"># see what is on port 3000 and stop it</span>
 <span class="p">$</span> curl -s api.example.com | zx json
-<span class="p">$</span> zx paste | zx json | zx clip <span class="c"># the clipboard as a pipe, same on every OS</span>
-<span class="p">$</span> zx doctor --fix            <span class="c"># check this machine and project, install what's missing</span></pre>
+<span class="p">$</span> zx paste | zx json | zx clip <span class="c"># the clipboard as a pipe, same on every OS</span></pre>
     </div>
   </section>
 

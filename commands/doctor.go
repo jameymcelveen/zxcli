@@ -34,8 +34,9 @@ type Check struct {
 	OK     bool   `json:"ok"`
 	Detail string `json:"detail,omitempty"`
 	Path   string `json:"path,omitempty"`
-	Source string `json:"source"` // machine or project
+	Source string `json:"source"` // machine, project, or stack:<name>
 	Fix    string `json:"fix,omitempty"`
+	Why    string `json:"why,omitempty"`
 }
 
 func runDoctor(c *core.Context) error {
@@ -45,11 +46,42 @@ func runDoctor(c *core.Context) error {
 	fix := fs.Bool("fix", false, "install what is missing, after showing the commands and asking")
 	yes := fs.Bool("yes", false, "with --fix: do not ask before running the commands")
 	trust := fs.Bool("trust", false, "approve this project's custom checks so they may run")
-	if _, err := c.Parse(fs); err != nil {
+	stackFlag := fs.String("stack", "", "also check a stack: dotnet, react, laravel ... (comma-separated; see --list)")
+	includeFlag := fs.String("include", "", "same as --stack")
+	list := fs.Bool("list", false, "list the stacks zx doctor knows")
+	discover := fs.Bool("discover", false, "look at this folder and suggest what it needs")
+	noAI := fs.Bool("no-ai", false, "with --discover: do not ask an AI")
+	pos, err := c.Parse(fs)
+	if err != nil {
 		return err
 	}
+	if *list {
+		printStacks(c)
+		return nil
+	}
 	cfg := c.App.Config
-	plan := DoctorPlan(cfg)
+	dir, err := workDir()
+	if err != nil {
+		return err
+	}
+	// "zx doctor laravel" and "zx doctor --stack laravel" mean the same thing.
+	specs := splitList(cfg.Setting("doctor.stacks", "") + "," + *stackFlag + "," + *includeFlag + "," + strings.Join(pos, ","))
+	stack, err := StackChecks(baseDir(cfg, dir), specs)
+	if err != nil {
+		return err
+	}
+	var found []foundStack
+	var p *prompter
+	if *discover {
+		p = newPrompter(c)
+		var extra []core.DoctorCheck
+		found, extra = discoverStacks(c, p, dir, *noAI, *asJSON)
+		for _, f := range found {
+			stack = append(stack, f.checks...)
+		}
+		stack = append(stack, extra...)
+	}
+	plan := planWith(cfg, stack)
 
 	// A project's custom checks are shell commands written by whoever wrote
 	// the repo. They run only after the user approves them with --trust, and
@@ -87,6 +119,9 @@ func runDoctor(c *core.Context) error {
 			attention++
 		}
 	}
+	if *discover && !*asJSON {
+		defer offerToSave(c, p, cfg, dir, found, stack)
+	}
 	if *asJSON {
 		if err := c.JSON(checks); err != nil {
 			return err
@@ -102,7 +137,12 @@ func runDoctor(c *core.Context) error {
 
 // DoctorPlan lists what to check: this machine's list, then the project's. A
 // project entry for a tool replaces the machine's entry for the same tool.
-func DoctorPlan(cfg core.Config) []core.DoctorCheck {
+func DoctorPlan(cfg core.Config) []core.DoctorCheck { return planWith(cfg, nil) }
+
+// planWith is DoctorPlan with stack checks (from --include or --discover)
+// between the machine's list and the project's. A stack entry for a tool
+// replaces the machine's entry; a project entry replaces both.
+func planWith(cfg core.Config, stack []core.DoctorCheck) []core.DoctorCheck {
 	machine := cfg.UserDoctor
 	if machine == nil {
 		for _, name := range strings.Split(cfg.Setting("doctor.tools", DefaultDoctorTools), ",") {
@@ -111,14 +151,24 @@ func DoctorPlan(cfg core.Config) []core.DoctorCheck {
 			}
 		}
 	}
-	inProject := map[string]bool{}
+	inProject, inStack := map[string]bool{}, map[string]bool{}
 	for _, d := range cfg.ProjectDoctor {
 		if d.Tool != "" {
 			inProject[d.Tool] = true
 		}
 	}
+	for _, d := range stack {
+		if d.Tool != "" {
+			inStack[d.Tool] = true
+		}
+	}
 	var plan []core.DoctorCheck
 	for _, d := range machine {
+		if d.Tool == "" || (!inProject[d.Tool] && !inStack[d.Tool]) {
+			plan = append(plan, d)
+		}
+	}
+	for _, d := range stack {
 		if d.Tool == "" || !inProject[d.Tool] {
 			plan = append(plan, d)
 		}
@@ -159,7 +209,7 @@ func runDoctorPlan(plan []core.DoctorCheck, approved bool) []Check {
 	// Keep machine checks together, ahead of the project's.
 	split := len(checks)
 	for i, ck := range checks {
-		if ck.Source == "project" {
+		if ck.Source != "machine" {
 			split = i
 			break
 		}
@@ -170,9 +220,19 @@ func runDoctorPlan(plan []core.DoctorCheck, approved bool) []Check {
 }
 
 func evalCheck(d core.DoctorCheck, approved bool) Check {
-	ck := Check{Name: d.Label(), Source: "machine"}
-	if d.Project {
+	ck := Check{Name: d.Label(), Source: "machine", Why: d.Why}
+	if d.Stack != "" {
+		ck.Source = "stack:" + d.Stack
+	} else if d.Project {
 		ck.Source = "project"
+	}
+	if d.File != "" {
+		if _, err := os.Stat(filepath.Join(d.Dir, d.File)); err == nil {
+			ck.Status, ck.OK, ck.Detail = "ok", true, "present"
+			return ck
+		}
+		ck.Status, ck.Detail, ck.Fix = "missing", "not found", d.Install.For(runtime.GOOS)
+		return ck
 	}
 	if d.Tool == "" {
 		if d.Project && !approved {
@@ -282,6 +342,8 @@ func BuiltinFix(tool, goos string) (install, upgrade string) {
 		pkg := map[string]string{
 			"git": "git", "gh": "gh", "go": "go", "node": "node", "npm": "node", "python3": "python",
 			"dotnet": "--cask dotnet-sdk", "docker": "--cask docker",
+			"php": "php", "composer": "composer", "cargo": "rust", "rustc": "rust", "java": "--cask temurin",
+			"mvn": "maven", "gradle": "gradle", "ruby": "ruby", "pnpm": "pnpm", "yarn": "yarn",
 		}[tool]
 		if pkg != "" && has("brew") {
 			return "brew install " + pkg, "brew upgrade " + pkg
@@ -290,6 +352,8 @@ func BuiltinFix(tool, goos string) (install, upgrade string) {
 		id := map[string]string{
 			"git": "Git.Git", "gh": "GitHub.cli", "go": "GoLang.Go", "node": "OpenJS.NodeJS.LTS", "npm": "OpenJS.NodeJS.LTS",
 			"dotnet": "Microsoft.DotNet.SDK.10", "docker": "Docker.DockerDesktop",
+			"php": "PHP.PHP.8.4", "cargo": "Rustlang.Rustup", "rustc": "Rustlang.Rustup",
+			"java": "EclipseAdoptium.Temurin.21.JDK", "pnpm": "pnpm.pnpm", "yarn": "Yarn.Yarn",
 		}[tool]
 		if id != "" && has("winget") {
 			return "winget install -e --id " + id, "winget upgrade -e --id " + id
@@ -298,6 +362,8 @@ func BuiltinFix(tool, goos string) (install, upgrade string) {
 		pkg := map[string]string{
 			"git": "git", "gh": "gh", "go": "golang-go", "node": "nodejs", "npm": "npm", "python3": "python3",
 			"make": "make", "docker": "docker.io",
+			"php": "php-cli", "composer": "composer", "cargo": "cargo", "rustc": "rustc", "java": "default-jdk",
+			"mvn": "maven", "gradle": "gradle", "ruby": "ruby-full",
 		}[tool]
 		if pkg != "" && has("apt-get") {
 			cmd := "sudo apt-get install -y " + pkg
@@ -324,7 +390,7 @@ func applyFixes(c *core.Context, checks []Check, yes bool) (bool, error) {
 	}
 	fmt.Fprintf(c.Stderr, "zx doctor --fix will run:\n")
 	for _, ck := range fixes {
-		fmt.Fprintf(c.Stderr, "  %s   %s\n", ck.Fix, c.App.Dim("("+ck.Name+", from this "+ck.Source+")"))
+		fmt.Fprintf(c.Stderr, "  %s   %s\n", ck.Fix, c.App.Dim("("+ck.Name+", from "+sourceLabel(ck.Source)+")"))
 	}
 	if !yes {
 		fmt.Fprintf(c.Stderr, "Run %s? [y/N] ", plural(len(fixes), "this command", "these commands"))
@@ -342,6 +408,19 @@ func applyFixes(c *core.Context, checks []Check, yes bool) (bool, error) {
 	}
 	fmt.Fprintln(c.Stderr)
 	return true, nil
+}
+
+// sourceLabel says where a check came from, for the --fix listing.
+func sourceLabel(source string) string {
+	switch {
+	case source == "machine":
+		return "this machine"
+	case source == "project":
+		return "this project"
+	case source == "stack:ai":
+		return "an AI suggestion"
+	}
+	return "the " + strings.TrimPrefix(source, "stack:") + " stack"
 }
 
 func plural(n int, one, many string) string {
@@ -365,8 +444,13 @@ func printDoctor(c *core.Context, cfg core.Config, checks []Check, attention int
 		if ck.Source != section {
 			section = ck.Source
 			title, where := "This machine", cfg.UserPath
-			if section == "project" {
+			switch {
+			case section == "project":
 				title, where = "This project", cfg.ProjectPath
+			case section == "stack:ai":
+				title, where = "Suggested by AI", ""
+			case strings.HasPrefix(section, "stack:"):
+				title, where = "Stack: "+strings.TrimPrefix(section, "stack:"), ""
 			}
 			c.Printf("\n%s  %s\n", c.App.Bold(title), c.App.Dim(where))
 		}
@@ -381,6 +465,9 @@ func printDoctor(c *core.Context, cfg core.Config, checks []Check, attention int
 			line += "  " + padRight(ck.Detail, detailW) + "  " + c.App.Dim(ck.Path)
 		} else if ck.Detail != "" {
 			line += "  " + ck.Detail
+		}
+		if !ck.OK && ck.Why != "" {
+			line += "  " + c.App.Dim("("+ck.Why+")")
 		}
 		c.Println(line)
 	}

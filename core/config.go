@@ -238,8 +238,40 @@ func LoadConfig(cwd string) (Config, []string) {
 			cfg.Settings[k] = v
 		}
 		addFiles(filepath.Join(root, ProjectDirName, "commands"), root, true)
+		extra, warn := LoadDoctorFile(filepath.Join(root, ProjectDirName, DoctorFileName), root)
+		cfg.ProjectDoctor = append(cfg.ProjectDoctor, extra...)
+		warnings = append(warnings, warn...)
 	}
 	return cfg, warnings
+}
+
+// DoctorFileName is the file in .zx that "zx doctor --discover" writes: a list
+// of extra checks, in the same shape as the "doctor" list in a config file.
+const DoctorFileName = "doctor.json"
+
+// LoadDoctorFile reads a machine-written list of doctor checks. A missing
+// file is not a problem. The checks count as the project's own, so a custom
+// "run" check still needs "zx doctor --trust".
+func LoadDoctorFile(path, root string) ([]DoctorCheck, []string) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, nil
+	}
+	var list []DoctorCheck
+	if err := json.Unmarshal(StripJSONC(data), &list); err != nil {
+		return nil, []string{fmt.Sprintf("%s: %v", path, err)}
+	}
+	var out []DoctorCheck
+	var warnings []string
+	for _, d := range list {
+		if err := d.validate(); err != nil {
+			warnings = append(warnings, fmt.Sprintf("%s: skipping a doctor check: %v", path, err))
+			continue
+		}
+		d.Source, d.Project, d.Dir = path, true, root
+		out = append(out, d)
+	}
+	return out, warnings
 }
 
 // StripJSONC turns "JSON with comments" into plain JSON. It removes // and
@@ -315,12 +347,15 @@ type DoctorCheck struct {
 	Min     string     `json:"min,omitempty"`
 	Name    string     `json:"name,omitempty"`
 	Run     string     `json:"run,omitempty"`
+	File    string     `json:"file,omitempty"` // a file or folder that must exist, relative to Dir
+	Why     string     `json:"why,omitempty"`  // shown beside a check that fails
 	Install OSCommands `json:"install,omitempty"`
 	Upgrade OSCommands `json:"upgrade,omitempty"`
 
 	Source  string `json:"-"` // file the check was defined in
-	Dir     string `json:"-"` // working directory for Run
+	Dir     string `json:"-"` // working directory for Run, and the base for File
 	Project bool   `json:"-"` // true when it came from a project's .zx.json
+	Stack   string `json:"-"` // set when it came from a stack preset such as "laravel"
 }
 
 // UnmarshalJSON accepts "git" as shorthand for {"tool": "git"}.
@@ -338,6 +373,10 @@ func (d DoctorCheck) validate() error {
 	switch {
 	case d.Tool != "" && d.Run != "":
 		return fmt.Errorf("%q has both \"tool\" and \"run\"; use one", d.Tool)
+	case d.File != "" && (d.Tool != "" || d.Run != ""):
+		return fmt.Errorf("%q has \"file\" together with \"tool\" or \"run\"; use one", d.File)
+	case d.File != "":
+		return nil
 	case d.Tool != "" && !scriptName.MatchString(d.Tool):
 		return fmt.Errorf("%q is not a program name", d.Tool)
 	case d.Tool == "" && (d.Name == "" || d.Run == ""):
@@ -348,10 +387,13 @@ func (d DoctorCheck) validate() error {
 
 // Label is the name shown in the report.
 func (d DoctorCheck) Label() string {
-	if d.Name != "" {
+	switch {
+	case d.Name != "":
 		return d.Name
+	case d.Tool != "":
+		return d.Tool
 	}
-	return d.Tool
+	return d.File
 }
 
 // OSCommands is a shell command per operating system. In config it is either

@@ -157,13 +157,15 @@
     },
     {
       "name": "doctor",
-      "summary": "Check that this machine has what you and the project need, and install what is missing",
-      "usage": "zx doctor [flags]",
+      "summary": "Check that this machine is ready for a project, and install what is missing",
+      "usage": "zx doctor [stack...] [flags]",
       "group": "Workspace",
       "examples": [
         "zx doctor",
+        "zx doctor laravel react",
+        "zx doctor --discover",
         "zx doctor --fix",
-        "zx doctor --trust",
+        "zx doctor --list",
         "zx doctor --strict --json"
       ]
     },

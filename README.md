@@ -1,6 +1,35 @@
 # zx
 
-A pluggable command-line toolbox for everyday developer chores. One small binary, no runtime, no dependencies.
+**Clone a project. Run one command. Your machine is ready.**
+
+```console
+$ zx doctor --discover
+Looked at ~/dev/shop
+Found:
+  laravel       composer.json requires laravel/framework
+  react (web/)  package.json lists react
+  docker        docker-compose.yml
+
+Stack: laravel
+ok       php       8.4.1    /usr/local/bin/php
+ok       composer  2.8.3    /usr/local/bin/composer
+missing  vendor    not found
+missing  .env      not found
+
+Stack: react
+ok       node      22.11.0  /usr/local/bin/node
+missing  web/node_modules  not found
+
+Suggested by AI
+missing  redis-server  not installed  (docker-compose.yml runs redis)
+
+5 of 12 checks need attention
+$ zx doctor --fix        # shows every command, asks once, installs, checks again
+```
+
+`zx doctor` knows 16 stacks: .NET, React, Next.js, Vue, Angular, Node, Laravel, PHP, Python, Go, Rust, Java, Ruby, Rails, Docker and make. Name a stack (`zx doctor laravel`) or let zx look at the folder (`zx doctor --discover`).
+
+zx is also a pluggable command-line toolbox for everyday developer chores. One small binary, no runtime, no dependencies.
 
 ```console
 $ zx guid
@@ -59,7 +88,7 @@ The installers are not code-signed. macOS asks you to confirm the `.pkg` (right-
 | `zx hash` | SHA-256 (or `-a md5`, `sha1`, `sha512`) of files, text or stdin |
 | `zx repos` | Which git repos under `~/dev` have uncommitted, unpushed or unfetched work |
 | `zx init` | Starter files for a project: `.editorconfig`, `.gitignore`, MIT license, Makefile, CI workflow, `.zx.json` |
-| `zx doctor` | Check that a machine has what you and the project need, and `--fix` to install what is missing |
+| `zx doctor` | Is this machine ready for the project? Knows 16 stacks, `--discover` looks at a folder, `--fix` installs what is missing |
 | `zx port` | What is listening on a port, and `-k` to stop it |
 | `zx ip` | Local IP addresses |
 | `zx serve` | Serve a folder over HTTP: `zx serve ./dist -p 3000` |
@@ -263,10 +292,20 @@ A check is either a **tool** (with an optional minimum version) or a **named com
 | | |
 | --- | --- |
 | `zx doctor` | Report only. It installs nothing. |
+| `zx doctor laravel react` | Add stacks to the check (also `--stack`). `zx doctor --list` shows them all. A stack reads your project's files for the versions it needs. `name@folder` points at a subfolder, such as `react@web`. |
+| `zx doctor --discover` | Look at this folder and list every stack it finds, then check them. Optionally asks an AI what else the project needs; see below. |
 | `zx doctor --fix` | Show every install command, ask once, run them, then check again. `--yes` skips the question. |
 | `zx doctor --trust` | Approve a project's custom `run` checks. |
 | `zx doctor --strict` | Exit 1 if anything needs attention, for CI or a setup script. |
 | `zx doctor --json` | The report as JSON. |
+
+### Stacks and discovery
+
+A stack is a ready-made set of checks. `laravel` checks PHP at the version `composer.json` asks for, Composer, that `vendor/` is installed and that `.env` exists, and Node too when there is a `package.json`. `dotnet` reads the SDK version from `global.json` or the project files, `go` from `go.mod`, and so on. Fixes for a subfolder run in that subfolder.
+
+`zx doctor --discover` finds the stacks in the current folder and its immediate subfolders without any AI, then shows what it found and checks it. When you are at a terminal and an AI is set up (`zx ai`), it can also ask that AI what else the project needs, such as redis or a database client. Before anything is sent, zx lists exactly which files it would send and asks. `.env` is never read, `.env.example` is sent as variable names only, secret-looking lines are redacted, and the total is capped at about 20 KB. `--no-ai` skips the question.
+
+Afterwards zx offers to save the result so a plain `zx doctor` checks it every time. It writes only its own files, `.zx/settings.json` (`doctor.stacks`) and `.zx/doctor.json`, and never touches your `.zx.json`. Commit them to share the setup with your team.
 
 A project's `.zx.json` is written by whoever wrote the repo, so zx is careful with it. Its custom `run` checks are shown as `skipped` until you approve them with `--trust`, and they need approving again whenever they change. Install commands never run without `--fix`, and `--fix` always prints them first.
 
