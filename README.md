@@ -86,6 +86,7 @@ The installers are not code-signed. macOS asks you to confirm the `.pkg` (right-
 | `zx json` | Pretty-print, minify (`-m`) or validate JSON |
 | `zx jwt` | Decode a JWT and show when it expires |
 | `zx hash` | SHA-256 (or `-a md5`, `sha1`, `sha512`) of files, text or stdin |
+| `zx git` | Everyday git in one word: `save`, `ship`, `sync`, `tag`, `merge`, `undo`. See [zx git](#zx-git) |
 | `zx repos` | Which git repos under `~/dev` have uncommitted, unpushed or unfetched work |
 | `zx init` | Starter files for a project: `.editorconfig`, `.gitignore`, MIT license, Makefile, CI workflow, `.zx.json` |
 | `zx doctor` | Is this machine ready for the project? Knows 16 stacks, `--discover` looks at a folder, `--fix` installs what is missing |
@@ -308,6 +309,37 @@ A stack is a ready-made set of checks. `laravel` checks PHP at the version `comp
 Afterwards zx offers to save the result so a plain `zx doctor` checks it every time. It writes only its own files, `.zx/settings.json` (`doctor.stacks`) and `.zx/doctor.json`, and never touches your `.zx.json`. Commit them to share the setup with your team.
 
 A project's `.zx.json` is written by whoever wrote the repo, so zx is careful with it. Its custom `run` checks are shown as `skipped` until you approve them with `--trust`, and they need approving again whenever they change. Install commands never run without `--fix`, and `--fix` always prints them first.
+
+## zx git
+
+`git status`, `git add .`, `git commit -m "..."` as one word:
+
+```bash
+zx git save              # stage everything and commit, with a message zx writes
+zx git save -n           # show what it would commit and the message, change nothing
+zx git save "fix login"  # or write it yourself
+zx git ship              # save, then push
+zx git sync              # pull --rebase, then push
+zx git tag               # run the tests, tag the next patch version, push it (also: minor, major, 1.2.3)
+zx git merge --delete    # merge this branch into main, push, delete the branch
+zx git undo              # take back the last commit, keep your changes staged
+```
+
+**Messages.** One changed file is `Update README.md` with `+200 -55` in the body. A few files are listed by name, and a pile of files in one folder becomes `Update 12 files in site/`. When the change is too mixed for a pattern to say anything useful, zx asks your AI (`zx ai`) and sends it the file list and a trimmed diff with secret-looking values hidden. If no AI is set up or it fails, you get the plain pattern message and the commit still happens. Set `git.message` to `pattern` to never use AI, or `ai` to always use it.
+
+**Safe by default.** `save` stops before committing anything that looks like a secret (`.env`, `*.pem`, `id_rsa`, ...) unless you pass `--force`. `undo` refuses a commit that is already pushed. `tag` and `merge` refuse a dirty tree, and `tag` runs your tests first and stops if they fail. Commands that touch the network or switch branches print the git command they run.
+
+**Make it your own.** Everyone's flow differs, so flows are settings. Chain steps (`save`, `push`, `sync`, `test`, `tag`, `merge`) in `.zx.json` or your user config:
+
+```jsonc
+"settings": {
+  "git.flow.land": "test, save, push",   // zx git land "message"
+  "git.test": "make test",               // otherwise zx guesses: make, go, npm, dotnet, cargo, pytest
+  "git.main": "develop"                  // the branch merge uses
+}
+```
+
+**As git aliases.** `zx git alias` makes `git save`, `git ship`, `git sync` and `git undo` (for every repo; `--local` for one). Name your own with `zx git alias ac=save land=land`, list them with `--list`, remove with `--remove`. It will not take over a real git command like `git tag` without `--force`.
 
 ## Shell completion
 

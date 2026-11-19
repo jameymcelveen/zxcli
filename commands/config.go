@@ -39,6 +39,10 @@ const StarterConfig = `// zx user config. Comments and trailing commas are fine 
   // Options for individual commands.
   "settings": {
     // "repos.dir": "~/dev",                  // where "zx repos" looks
+    // "git.message": "auto",                 // zx git save: auto, ai (always ask the AI) or pattern (never)
+    // "git.test": "make test",               // what zx git test and zx git tag run first
+    // "git.main": "main",                    // the branch zx git merge merges into
+    // "git.flow.land": "test, save, push",   // your own: zx git land "message"
   },
 
   // What "zx doctor" checks on this machine. A project can add its own list

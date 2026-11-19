@@ -170,6 +170,20 @@
       ]
     },
     {
+      "name": "git",
+      "summary": "Everyday git in one word: save, push, sync, tag, merge, undo",
+      "usage": "zx git <command> [args] [flags]",
+      "group": "Workspace",
+      "examples": [
+        "zx git save",
+        "zx git save -n",
+        "zx git ship",
+        "zx git tag minor",
+        "zx git merge --delete",
+        "zx git alias"
+      ]
+    },
+    {
       "name": "port",
       "summary": "Show what is listening on a port, and stop it",
       "usage": "zx port [number] [flags]",
