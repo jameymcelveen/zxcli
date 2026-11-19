@@ -247,7 +247,7 @@ func evalCheck(d core.DoctorCheck, approved bool) Check {
 			return ck
 		}
 		ck.Status, ck.Detail = "failed", d.Run
-		if line := firstLine(string(out)); line != "" {
+		if line := failureLine(string(out)); line != "" {
 			ck.Detail = line
 		}
 		ck.Fix = d.Install.For(runtime.GOOS)
@@ -289,6 +289,32 @@ func firstNonEmpty(values ...string) string {
 		if v != "" {
 			return v
 		}
+	}
+	return ""
+}
+
+// failureLine picks the line of a failed command's output that says what went
+// wrong. Many tools print a banner first (docker info starts with "Client:"
+// and only later says it cannot reach the daemon), so a line that reads like an
+// error beats the first line.
+func failureLine(out string) string {
+	var lines []string
+	for _, l := range strings.Split(strings.ReplaceAll(out, "\r\n", "\n"), "\n") {
+		if l = strings.TrimSpace(l); l != "" {
+			lines = append(lines, l)
+		}
+	}
+	for _, l := range lines {
+		low := strings.ToLower(l)
+		for _, w := range []string{"error", "cannot", "can't", "failed", "denied", "refused", "not found", "no such", "unable", "not running"} {
+			if strings.Contains(low, w) {
+				l = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(l, "ERROR:"), "Error:"))
+				return firstLine(l)
+			}
+		}
+	}
+	if len(lines) > 0 {
+		return firstLine(lines[0])
 	}
 	return ""
 }

@@ -94,7 +94,7 @@ The installers are not code-signed. macOS asks you to confirm the `.pkg` (right-
 | `zx ip` | Local IP addresses |
 | `zx serve` | Serve a folder over HTTP: `zx serve ./dist -p 3000` |
 | `zx clip`, `zx paste` | The clipboard as a pipe, the same on every OS: `zx paste \| zx json \| zx clip` |
-| `zx upgrade` | Update zx to the latest release, verified against its checksums |
+| `zx upgrade` | Update zx to the latest release, verified against its checksums (`--snooze` quiets the new-version notice for a week, `--days N` to change that) |
 | `zx global` | Make your aliases and commands runnable without the `zx` prefix |
 | `zx ai` | Choose which AI writes commands for you |
 | `zx config` | Show, create (`init`) or edit your config |
@@ -373,3 +373,11 @@ To release, push a tag: `git tag v0.2.0 && git push origin v0.2.0`. GitHub Actio
 ## License
 
 [MIT](LICENSE)
+
+
+## Update notices
+
+Once a day zx quietly checks for a newer release. If there is one, it prints a short notice on stderr when you run a command in a terminal. It never appears in pipes, `--json` output, `zx upgrade`, or dev builds.
+
+- Dismiss for a while: `zx upgrade --snooze` (7 days) or `zx upgrade --snooze --days 30`
+- Turn off for good: set `update.check` to `off` in your settings, or export `ZX_NO_UPDATE_CHECK=1`

@@ -23,6 +23,11 @@ type App struct {
 	StdinTTY bool // true when stdin is a terminal, so there is nothing piped in
 	Color    bool
 
+	// Wrap, when set, is called before each command runs from the command
+	// line. It may return a function to call once the command has finished
+	// (the new-version notice uses this). Tests that call Dispatch skip it.
+	Wrap func(args []string) func()
+
 	index map[string]Meta // command name or alias -> meta, enabled commands only
 }
 
@@ -92,7 +97,15 @@ func (a *App) Run(args []string) int {
 	for _, w := range warnings {
 		fmt.Fprintln(a.Stderr, "zx: warning:", w)
 	}
-	return a.Exit(a.Dispatch(args))
+	var done func()
+	if a.Wrap != nil {
+		done = a.Wrap(args)
+	}
+	code := a.Exit(a.Dispatch(args))
+	if done != nil {
+		done()
+	}
+	return code
 }
 
 // Exit reports err to the user and turns it into an exit code.

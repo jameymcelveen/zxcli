@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/jameymcelveen/zxcli"
-	_ "github.com/jameymcelveen/zxcli/commands" // registers the built-in commands
+	"github.com/jameymcelveen/zxcli/commands" // also registers the built-in commands
 	"github.com/jameymcelveen/zxcli/core"
 )
 
@@ -16,5 +16,6 @@ func main() {
 		fmt.Fprintln(os.Stderr, "zx:", err)
 		os.Exit(1)
 	}
+	app.Wrap = commands.UpdateNotice(app)
 	os.Exit(app.Run(os.Args[1:]))
 }

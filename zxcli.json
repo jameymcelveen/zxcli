@@ -301,7 +301,8 @@
       "group": "zx",
       "examples": [
         "zx upgrade",
-        "zx upgrade --check"
+        "zx upgrade --check",
+        "zx upgrade --snooze --days 14"
       ]
     },
     {

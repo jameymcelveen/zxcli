@@ -2,6 +2,9 @@ package core
 
 import "os"
 
+// IsTerminal reports whether f is a terminal rather than a pipe or a file.
+func IsTerminal(f *os.File) bool { return isTerminal(f) }
+
 func isTerminal(f *os.File) bool {
 	st, err := f.Stat()
 	return err == nil && st.Mode()&os.ModeCharDevice != 0

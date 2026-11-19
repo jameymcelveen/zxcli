@@ -39,6 +39,7 @@ const StarterConfig = `// zx user config. Comments and trailing commas are fine 
   // Options for individual commands.
   "settings": {
     // "repos.dir": "~/dev",                  // where "zx repos" looks
+    // "update.check": "on",                  // daily new-version notice; "off" silences it (or: zx upgrade --snooze)
     // "git.message": "auto",                 // zx git save: auto, ai (always ask the AI) or pattern (never)
     // "git.test": "make test",               // what zx git test and zx git tag run first
     // "git.main": "main",                    // the branch zx git merge merges into

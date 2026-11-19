@@ -45,8 +45,20 @@ func runUpgrade(c *core.Context) error {
 	flags := c.Flags()
 	checkOnly := flags.Bool("check", false, "only say whether a newer version exists")
 	force := flags.Bool("force", false, "reinstall the latest release even if this build looks current")
+	snooze := flags.Bool("snooze", false, "stop mentioning new versions for a while (see --days)")
+	days := flags.Int("days", 7, "with --snooze: how many days to stay quiet")
 	if _, err := c.Parse(flags); err != nil {
 		return err
+	}
+	if *snooze {
+		if *days < 1 {
+			return core.Usagef("--days must be at least 1")
+		}
+		if err := snoozeUpdateNotice(time.Now().AddDate(0, 0, *days)); err != nil {
+			return err
+		}
+		c.Printf("ok, zx will not mention new versions for %s. It still checks, and 'zx upgrade' works any time.\n", plural(*days, "1 day", fmt.Sprintf("%d days", *days)))
+		return nil
 	}
 	client := &http.Client{Timeout: 2 * time.Minute}
 	latest, err := latestRelease(client)
