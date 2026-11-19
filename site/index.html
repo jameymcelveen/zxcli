@@ -80,6 +80,10 @@ footer{border-top:1px solid var(--line);padding:26px 0 44px;color:var(--dim);fon
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 0}
 .chips span{font:13px var(--mono);border:1px solid var(--line);background:var(--panel);color:var(--text);padding:4px 11px;border-radius:999px}
 @media (max-width:560px){.hero{padding-top:30px}nav .hide{display:none}}
+  .shots{display:grid;gap:18px;margin:22px 0;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}
+  .shots img{width:100%;height:auto;border-radius:10px;border:1px solid var(--line,#2a2a35);display:block}
+  .shots figcaption{font-size:.9rem;opacity:.8;margin-top:8px}
+  .shots figure{margin:0}
 </style>
 </head>
 <body>
@@ -147,6 +151,11 @@ Found:
 Run these commands? [y/N] <span class="g">y</span>
 ...
 everything checks out</pre>
+    </div>
+    <div class="shots">
+      <figure><img src="demos/doctor.gif" alt="Terminal recording of zx doctor listing checks, with project checks skipped until approved" loading="lazy"><figcaption><code>zx doctor</code> checks the machine and skips project commands it has not been told it can trust.</figcaption></figure>
+      <figure><img src="demos/trust.gif" alt="Terminal recording of zx doctor --trust listing the commands being approved" loading="lazy"><figcaption><code>zx doctor --trust</code> shows every command in the project file, then remembers your approval.</figcaption></figure>
+      <figure><img src="demos/fix.gif" alt="Terminal recording of zx doctor --fix running cp .env.example .env after a yes" loading="lazy"><figcaption><code>zx doctor --fix</code> shows the commands, asks once, then runs them and checks again.</figcaption></figure>
     </div>
     <div class="chips" aria-label="Stacks zx doctor knows">
       <span>.NET</span><span>React</span><span>Next.js</span><span>Vue</span><span>Angular</span><span>Node</span><span>Laravel</span><span>PHP</span><span>Python</span><span>Go</span><span>Rust</span><span>Java</span><span>Ruby</span><span>Rails</span><span>Docker</span><span>make</span>
