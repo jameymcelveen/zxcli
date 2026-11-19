@@ -47,7 +47,7 @@ func runDoctor(c *core.Context) error {
 	yes := fs.Bool("yes", false, "with --fix: do not ask before running the commands")
 	trust := fs.Bool("trust", false, "approve this project's custom checks so they may run")
 	stackFlag := fs.String("stack", "", "also check a stack: dotnet, react, laravel ... (comma-separated; see --list)")
-	includeFlag := fs.String("include", "", "same as --stack")
+	includeFlag := fs.String("include", "", core.HiddenFlag+"same as --stack")
 	list := fs.Bool("list", false, "list the stacks zx doctor knows")
 	discover := fs.Bool("discover", false, "look at this folder and suggest what it needs")
 	noAI := fs.Bool("no-ai", false, "with --discover: do not ask an AI")
@@ -472,11 +472,28 @@ func printDoctor(c *core.Context, cfg core.Config, checks []Check, attention int
 		c.Println(line)
 	}
 	c.Println()
-	if attention == 0 {
+	skipped := 0
+	for _, ck := range checks {
+		if ck.Status == "skipped" {
+			skipped++
+		}
+	}
+	attention -= skipped // skipped checks have not failed; they are waiting for --trust
+	note := ""
+	if skipped > 0 {
+		note = fmt.Sprintf("%d skipped (run zx doctor --trust)", skipped)
+	}
+	switch {
+	case attention == 0 && skipped == 0:
 		c.Println("everything checks out")
 		return
+	case attention == 0:
+		c.Println("everything that ran is fine,", note)
+		return
+	case skipped > 0:
+		note = ", " + note
 	}
-	c.Printf("%d of %d checks need attention\n", attention, len(checks))
+	c.Printf("%d of %d checks need attention%s\n", attention, len(checks), note)
 	var fixes []string
 	seen := map[string]bool{}
 	for _, ck := range checks {

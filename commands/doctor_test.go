@@ -156,7 +156,7 @@ func TestDoctorProjectChecksNeedApproval(t *testing.T) {
 	if !errors.As(err, &exit) {
 		t.Errorf("unapproved checks need attention, so --strict should exit 1; got %v", err)
 	}
-	if strings.Count(out, "skipped") != 2 || !strings.Contains(out, "zx doctor --trust") {
+	if strings.Count(out, "skipped  ") != 2 || !strings.Contains(out, "everything that ran is fine, 2 skipped (run zx doctor --trust)") {
 		t.Errorf("before --trust:\n%s", out)
 	}
 
@@ -332,5 +332,71 @@ func TestDoctorConfigForms(t *testing.T) {
 	}
 	if plan := DoctorPlan(core.Config{}); len(plan) != len(strings.Split(DefaultDoctorTools, ",")) {
 		t.Errorf("default plan has %d entries", len(plan))
+	}
+}
+
+func TestDoctorSkippedAreCountedSeparately(t *testing.T) {
+	home, project := t.TempDir(), t.TempDir()
+	t.Setenv("ZX_CONFIG", filepath.Join(home, "zxcli.json"))
+	pass, fail := "echo ok", "exit 1"
+	if runtime.GOOS == "windows" {
+		fail = "cmd /c exit 1"
+	}
+	if err := os.WriteFile(filepath.Join(project, core.ProjectFile), []byte(`{
+  "doctor": [
+    { "tool": "zx-no-such-tool" },
+    { "name": "passes", "run": "`+pass+`" },
+    { "name": "fails", "run": "`+fail+`" },
+  ]
+}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	oldWD := workDir
+	workDir = func() (string, error) { return project, nil }
+	t.Cleanup(func() { workDir = oldWD })
+	cfg, _ := core.LoadConfig(project)
+	app, out, _ := newApp(t, "")
+	if err := app.SetConfig(cfg); err != nil {
+		t.Fatal(err)
+	}
+	_ = app.Dispatch([]string{"doctor"})
+	if o := out.String(); !strings.Contains(o, "1 of ") || !strings.Contains(o, " checks need attention, 2 skipped (run zx doctor --trust)") {
+		t.Errorf("a missing tool is attention, unapproved checks are skipped:\n%s", out.String())
+	}
+}
+
+func TestDoctorExtrasDoNotRepeatProjectChecks(t *testing.T) {
+	home, project := t.TempDir(), t.TempDir()
+	t.Setenv("ZX_CONFIG", filepath.Join(home, "zxcli.json"))
+	if err := os.WriteFile(filepath.Join(project, core.ProjectFile), []byte(`{ "doctor": [ "az", { "name": "env", "run": "test -f .env" } ] }`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(project, core.ProjectDirName)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, core.DoctorFileName), []byte(`[ "az", "vhs", { "name": "again", "run": "test -f .env" } ]`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, warnings := core.LoadConfig(project)
+	if len(warnings) > 0 {
+		t.Fatal(warnings)
+	}
+	var names []string
+	for _, d := range cfg.ProjectDoctor {
+		names = append(names, d.Label())
+	}
+	if got := strings.Join(names, ","); got != "az,env,vhs" {
+		t.Errorf("project checks = %s, want az,env,vhs (the AI's repeats dropped)", got)
+	}
+}
+
+func TestDoctorHelpHidesTheOldIncludeFlag(t *testing.T) {
+	out := mustRun(t, "", "help", "doctor")
+	if strings.Contains(out, "--include") || !strings.Contains(out, "--stack") {
+		t.Errorf("help should show --stack and not --include:\n%s", out)
+	}
+	if _, _, err := run(t, "", "doctor", "--include=go", "--list"); err != nil {
+		t.Errorf("--include should keep working: %v", err)
 	}
 }

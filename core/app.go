@@ -353,6 +353,10 @@ func (a *App) HelpFor(name string, w io.Writer) error {
 	return a.route(name, nil, w) // produces the "unknown command" error
 }
 
+// HiddenFlag starts the usage text of a flag that still works but is left out
+// of the help, such as an old name kept for people who already use it.
+const HiddenFlag = "(hidden) "
+
 func (a *App) commandHelp(w io.Writer, m Meta, fs *flag.FlagSet) {
 	fmt.Fprintf(w, "%s  %s\n", a.Bold("zx "+m.Name), m.Summary)
 	usage := m.Usage
@@ -368,6 +372,9 @@ func (a *App) commandHelp(w io.Writer, m Meta, fs *flag.FlagSet) {
 	var rows []row
 	width := 0
 	fs.VisitAll(func(f *flag.Flag) {
+		if strings.HasPrefix(f.Usage, HiddenFlag) {
+			return
+		}
 		kind, usage := flag.UnquoteUsage(f)
 		left := "-" + f.Name
 		if len(f.Name) > 1 {

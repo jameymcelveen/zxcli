@@ -239,7 +239,18 @@ func LoadConfig(cwd string) (Config, []string) {
 		}
 		addFiles(filepath.Join(root, ProjectDirName, "commands"), root, true)
 		extra, warn := LoadDoctorFile(filepath.Join(root, ProjectDirName, DoctorFileName), root)
-		cfg.ProjectDoctor = append(cfg.ProjectDoctor, extra...)
+		for _, d := range extra {
+			dup := false
+			for _, have := range cfg.ProjectDoctor {
+				if d.sameAs(have) {
+					dup = true
+					break
+				}
+			}
+			if !dup {
+				cfg.ProjectDoctor = append(cfg.ProjectDoctor, d)
+			}
+		}
 		warnings = append(warnings, warn...)
 	}
 	return cfg, warnings
@@ -367,6 +378,18 @@ func (d *DoctorCheck) UnmarshalJSON(b []byte) error {
 	}
 	type plain DoctorCheck
 	return json.Unmarshal(b, (*plain)(d))
+}
+
+// sameAs reports whether two checks ask the same question: the same tool,
+// the same file, or the same command.
+func (d DoctorCheck) sameAs(o DoctorCheck) bool {
+	switch {
+	case d.Tool != "" || o.Tool != "":
+		return d.Tool == o.Tool
+	case d.File != "" || o.File != "":
+		return d.File == o.File
+	}
+	return d.Run != "" && d.Run == o.Run
 }
 
 func (d DoctorCheck) validate() error {
