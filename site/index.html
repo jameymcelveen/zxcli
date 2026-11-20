@@ -11,7 +11,8 @@
 <meta name="theme-color" content="#0c0e11">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <style>
-@font-face{font-family:"Elven Common Speak";src:url(fonts/ElvenCommonSpeak.ttf) format("truetype");font-display:swap}
+@font-face{font-family:"Uncial Antiqua";src:url(fonts/uncial-antiqua-latin-400-normal.woff2) format("woff2");font-display:swap}
+@font-face{font-family:"Almendra";src:url(fonts/almendra-latin-400-normal.woff2) format("woff2");font-display:swap}
 :root{
   --bg:#0c0e11; --panel:#14171c; --line:#252a32; --text:#e7e3d8; --dim:#8d949e;
   --go:#00add8; --amber:#e8b64c; --ok:#6fcf97;
@@ -30,8 +31,19 @@ nav{display:flex;align-items:center;gap:20px;padding:18px 0;font-size:14px}
 nav .logo{display:flex;color:var(--text)}nav .logo svg{display:block;height:26px;width:auto}
 nav .sp{flex:1}nav a{color:var(--dim)}nav a:hover{color:var(--text);text-decoration:none}
 .hero{padding:56px 0 36px}
-.verse{font:400 clamp(19px,3vw,26px)/1.55 "Elven Common Speak","Palatino Linotype",Palatino,Georgia,serif;letter-spacing:.04em;-webkit-text-stroke:.5px currentColor;color:var(--amber);margin:0 0 30px;padding-left:16px;border-left:2px solid var(--amber)}
-.verse b{font-weight:500;color:var(--text)}
+.catch{font:400 clamp(22px,3.4vw,34px)/1.2 "Uncial Antiqua",Georgia,serif;letter-spacing:.04em;color:var(--amber);background:none;border:0;padding:0;margin:0 0 26px;cursor:pointer;text-align:left;transition:text-shadow .25s,color .25s}
+.catch:hover,.catch:focus-visible{color:#ffc857;text-shadow:0 0 6px #ffb347,0 0 18px #ff9f1c,0 0 38px #ff7a00;outline:none}
+.veil{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:rgba(6,8,12,.6);-webkit-backdrop-filter:blur(16px) saturate(120%);backdrop-filter:blur(16px) saturate(120%);opacity:0;transition:opacity .3s;cursor:pointer}
+.veil[hidden]{display:none}.veil.show{opacity:1}
+.ringwrap{position:relative;width:min(92vmin,680px);aspect-ratio:1;display:grid;place-items:center}
+.ring{position:absolute;inset:0;width:100%;height:100%;animation:spin 140s linear infinite}
+.ring text{font:400 27px "Uncial Antiqua",serif;fill:#d9a441}
+@keyframes spin{to{transform:rotate(360deg)}}
+.poem{position:relative;margin:0;width:64%;text-align:center;font:400 clamp(16px,3.1vmin,25px)/1.6 Almendra,Georgia,serif;color:#f4ecd8;text-shadow:0 1px 10px #000;cursor:default}
+.poem b{font-weight:400;color:#ffc857}
+.veil .x{position:absolute;top:14px;right:18px;background:none;border:0;color:#f4ecd8;font:300 34px/1 system-ui;cursor:pointer;opacity:.8}
+.veil .hint{position:absolute;bottom:14px;left:0;right:0;text-align:center;color:#f4ecd8;opacity:.55;font-size:12px}
+@media (prefers-reduced-motion:reduce){.ring{animation:none}.veil{transition:none}}
 .hero h1{font:700 clamp(34px,6vw,60px)/1.05 var(--mono);margin:0 0 18px;letter-spacing:-.02em}
 .hero h1 span{color:var(--go)}
 .hero p.lead{font-size:clamp(17px,2.2vw,21px);color:var(--dim);max-width:640px;margin:0 0 28px}
@@ -103,14 +115,22 @@ footer{border-top:1px solid var(--line);padding:26px 0 44px;color:var(--dim);fon
   </nav>
 
   <header class="hero">
-    <p class="verse" aria-label="A verse about zx">A stack of tools you must install,<br>
-      Before a line of code can fall,<br>
-      In this land of script-file sprawl,<br>
-      One CLI takes that call:<br>
-      <b>One tool to rule them all,</b><br>
-      <b>One tool to find them,</b><br>
-      zx will tame your daily crawl—<br>
-      And with this tool, you bind them.</p>
+    <button class="catch" id="catch" type="button" aria-haspopup="dialog">One CLI to rule them all</button>
+    <div class="veil" id="veil" hidden role="dialog" aria-modal="true" aria-label="The zx verse">
+      <div class="ringwrap">
+        <svg class="ring" viewBox="0 0 600 600" aria-hidden="true"><defs><path id="rp" d="M300,300 m-255,0 a255,255 0 1,1 510,0 a255,255 0 1,1 -510,0"/></defs><text><textPath href="#rp" textLength="1590" lengthAdjust="spacing">Ash nazg durbatulûk, ash nazg gimbatul, ash nazg thrakatulûk agh burzum-ishi krimpatul.</textPath></text></svg>
+        <p class="poem">A stack of tools you must install,<br>
+        Before a line of code can fall,<br>
+        In this land of script-file sprawl,<br>
+        One CLI takes that call:<br>
+        <b>One tool to rule them all,</b><br>
+        <b>One tool to find them,</b><br>
+        zx will tame your daily crawl—<br>
+        And with this tool, you bind them.</p>
+      </div>
+      <button class="x" type="button" aria-label="Close">&times;</button>
+      <div class="hint">click anywhere or press Esc to close</div>
+    </div>
     <h1>Clone it.<br>Run <span>zx doctor</span>.<br>Start working.</h1>
     <p class="lead">zx looks at a project, works out what it needs, shows what is missing and installs it. <strong>One small Go binary, no dependencies.</strong> It is also the toolbox you reach for every day.</p>
 
@@ -306,6 +326,13 @@ Run it now? [y/N]</pre>
     });
   }).catch(function(){});
 })();
+</script>
+<script>
+(function(){var b=document.getElementById('catch'),v=document.getElementById('veil');if(!b||!v)return;
+function open(){v.hidden=false;requestAnimationFrame(function(){v.classList.add('show')});document.body.style.overflow='hidden';v.querySelector('.x').focus()}
+function close(){v.classList.remove('show');setTimeout(function(){v.hidden=true},300);document.body.style.overflow='';b.focus()}
+b.addEventListener('click',open);v.addEventListener('click',function(e){if(!e.target.closest('.poem'))close()});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!v.hidden)close()})})();
 </script>
 </body>
 </html>

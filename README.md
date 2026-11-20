@@ -2,6 +2,10 @@
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="site/zx-logo-dark.svg"><img src="site/zx-logo-light.svg" alt="zx" width="200"></picture></p>
 
+**One CLI to rule them all.**
+
+<details><summary>The poem</summary>
+
 > *A stack of tools you must install,*  
 > *Before a line of code can fall,*  
 > *In this land of script-file sprawl,*  
@@ -10,6 +14,8 @@
 > *One tool to find them,*  
 > *zx will tame your daily crawl—*  
 > *And with this tool, you bind them.*
+
+</details>
 
 **Clone a project. Run one command. Your machine is ready.**
 
