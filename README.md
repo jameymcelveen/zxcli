@@ -1,5 +1,7 @@
 # zx
 
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="site/zx-logo-dark.svg"><img src="site/zx-logo-light.svg" alt="zx" width="200"></picture></p>
+
 > *A stack of tools you must install,*  
 > *Before a line of code can fall,*  
 > *In this land of script-file sprawl,*  

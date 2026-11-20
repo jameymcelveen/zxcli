@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200" fill="none">
+  <style>
+    .zx-z { fill: #00B4FF; }
+    .zx-x { fill: currentColor; }
+  </style>
+  <!-- Z -->
+  <path class="zx-z" d="M40 40 L200 40 L160 100 L200 160 L40 160 L80 100 Z" />
+  <!-- X overlapping slightly -->
+  <path class="zx-x" d="M180 40 L240 40 L200 100 L240 160 L180 160 L140 100 Z M220 40 L280 40 L240 100 L280 160 L220 160 L180 100 Z" />
+</svg>

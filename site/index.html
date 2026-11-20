@@ -9,11 +9,9 @@
 <meta property="og:description" content="zx doctor finds what a project needs and installs what is missing. One small Go binary with zero dependencies.">
 <meta property="og:url" content="https://zxcli.com/">
 <meta name="theme-color" content="#0c0e11">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230c0e11'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='17' font-weight='700' text-anchor='middle' fill='%2300add8'%3Ezx%3C/text%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500&display=swap">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <style>
+@font-face{font-family:"Elven Common Speak";src:url(fonts/ElvenCommonSpeak.ttf) format("truetype");font-display:swap}
 :root{
   --bg:#0c0e11; --panel:#14171c; --line:#252a32; --text:#e7e3d8; --dim:#8d949e;
   --go:#00add8; --amber:#e8b64c; --ok:#6fcf97;
@@ -29,10 +27,10 @@ a{color:var(--go);text-decoration:none}a:hover{text-decoration:underline}
 code,pre,.mono{font-family:var(--mono)}
 .wrap{max-width:1040px;margin:0 auto;padding:0 20px}
 nav{display:flex;align-items:center;gap:20px;padding:18px 0;font-size:14px}
-nav .logo{font:700 20px var(--mono);color:var(--text)}nav .logo b{color:var(--go)}
+nav .logo{display:flex;color:var(--text)}nav .logo svg{display:block;height:26px;width:auto}
 nav .sp{flex:1}nav a{color:var(--dim)}nav a:hover{color:var(--text);text-decoration:none}
 .hero{padding:56px 0 36px}
-.verse{font:500 clamp(14px,2vw,17px)/1.7 "Cinzel","Palatino Linotype",Palatino,Georgia,serif;letter-spacing:.06em;color:var(--amber);margin:0 0 30px;padding-left:16px;border-left:2px solid var(--amber)}
+.verse{font:400 clamp(19px,3vw,26px)/1.55 "Elven Common Speak","Palatino Linotype",Palatino,Georgia,serif;letter-spacing:.04em;-webkit-text-stroke:.5px currentColor;color:var(--amber);margin:0 0 30px;padding-left:16px;border-left:2px solid var(--amber)}
 .verse b{font-weight:500;color:var(--text)}
 .hero h1{font:700 clamp(34px,6vw,60px)/1.05 var(--mono);margin:0 0 18px;letter-spacing:-.02em}
 .hero h1 span{color:var(--go)}
@@ -94,7 +92,8 @@ footer{border-top:1px solid var(--line);padding:26px 0 44px;color:var(--dim);fon
 <body>
 <div class="wrap">
   <nav>
-    <span class="logo"><b>z</b>x</span>
+    <a class="logo" href="./" aria-label="zx home"><svg viewBox="470 340 790 460" height="26" role="img" aria-label="zx"><path fill="#2FC1F7" d="M540 358H778L872 482L676 685H832L760 780H483L520 692L752 453H530Z"/>
+  <path fill="currentColor" d="M798 358H930L1015 475L1100 358H1232L1082 558L1250 780H1115L1015 643L912 780H778L947 558Z"/></svg></a>
     <span class="sp"></span>
     <a href="#doctor" class="hide">Doctor</a>
     <a href="#commands" class="hide">Commands</a>
