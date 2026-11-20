@@ -1,5 +1,14 @@
 # zx
 
+> *A stack of tools you must install,*  
+> *Before a line of code can fall,*  
+> *In this land of script-file sprawl,*  
+> *One CLI takes that call:*  
+> *One tool to rule them all,*  
+> *One tool to find them,*  
+> *zx will tame your daily crawl—*  
+> *And with this tool, you bind them.*
+
 **Clone a project. Run one command. Your machine is ready.**
 
 ```console
