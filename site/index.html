@@ -11,6 +11,7 @@
 <meta name="theme-color" content="#0c0e11">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <style>
+@font-face{font-family:"Elven Common Speak";src:url(fonts/ElvenCommonSpeak.ttf) format("truetype");font-display:swap}
 @font-face{font-family:"Uncial Antiqua";src:url(fonts/uncial-antiqua-latin-400-normal.woff2) format("woff2");font-display:swap}
 @font-face{font-family:"Almendra";src:url(fonts/almendra-latin-400-normal.woff2) format("woff2");font-display:swap}
 :root{
@@ -37,7 +38,7 @@ nav .sp{flex:1}nav a{color:var(--dim)}nav a:hover{color:var(--text);text-decorat
 .veil[hidden]{display:none}.veil.show{opacity:1}
 .ringwrap{position:relative;width:min(92vmin,680px);aspect-ratio:1;display:grid;place-items:center}
 .ring{position:absolute;inset:0;width:100%;height:100%;animation:spin 140s linear infinite}
-.ring text{font:400 27px "Uncial Antiqua",serif;fill:#d9a441}
+.ring text{font:400 34px "Elven Common Speak","Uncial Antiqua",serif;fill:#d9a441;stroke:#d9a441;stroke-width:.5px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .poem{position:relative;margin:0;width:64%;text-align:center;font:400 clamp(16px,3.1vmin,25px)/1.6 Almendra,Georgia,serif;color:#f4ecd8;text-shadow:0 1px 10px #000;cursor:default}
 .poem b{font-weight:400;color:#ffc857}
@@ -118,7 +119,7 @@ footer{border-top:1px solid var(--line);padding:26px 0 44px;color:var(--dim);fon
     <button class="catch" id="catch" type="button" aria-haspopup="dialog">One CLI to rule them all</button>
     <div class="veil" id="veil" hidden role="dialog" aria-modal="true" aria-label="The zx verse">
       <div class="ringwrap">
-        <svg class="ring" viewBox="0 0 600 600" aria-hidden="true"><defs><path id="rp" d="M300,300 m-255,0 a255,255 0 1,1 510,0 a255,255 0 1,1 -510,0"/></defs><text><textPath href="#rp" textLength="1590" lengthAdjust="spacing">Ash nazg durbatulûk, ash nazg gimbatul, ash nazg thrakatulûk agh burzum-ishi krimpatul.</textPath></text></svg>
+        <svg class="ring" viewBox="0 0 600 600" aria-hidden="true"><defs><path id="rp" d="M300,300 m-255,0 a255,255 0 1,1 510,0 a255,255 0 1,1 -510,0"/></defs><text><textPath href="#rp" textLength="1590" lengthAdjust="spacing">Ash nazg durbatuluk, ash nazg gimbatul, ash nazg thrakatuluk agh burzum-ishi krimpatul.</textPath></text></svg>
         <p class="poem">A stack of tools you must install,<br>
         Before a line of code can fall,<br>
         In this land of script-file sprawl,<br>
