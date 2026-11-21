@@ -207,6 +207,21 @@
       ]
     },
     {
+      "name": "caffeinate",
+      "summary": "Keep this machine awake, with a quiet screen saver. Esc stops it",
+      "usage": "zx caffeinate [duration] [flags]",
+      "group": "System",
+      "aliases": [
+        "awake"
+      ],
+      "examples": [
+        "zx caffeinate",
+        "zx caffeinate 2h",
+        "zx caffeinate --style rain",
+        "zx caffeinate --display-sleep"
+      ]
+    },
+    {
       "name": "serve",
       "summary": "Serve a folder over HTTP",
       "usage": "zx serve [folder] [flags]",

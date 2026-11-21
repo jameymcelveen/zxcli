@@ -30,3 +30,7 @@ func (a *App) paint(code, s string) string {
 func (a *App) Bold(s string) string { return a.paint("1", s) }
 func (a *App) Dim(s string) string  { return a.paint("2", s) }
 func (a *App) Cyan(s string) string { return a.paint("36", s) }
+
+// EnableVT turns on ANSI escape handling for f where the platform needs it
+// (Windows), and reports whether escapes will work.
+func EnableVT(f *os.File) bool { return enableVT(f) }
