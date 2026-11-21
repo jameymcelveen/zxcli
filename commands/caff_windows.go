@@ -75,3 +75,6 @@ func termSize() (w, h int) {
 // displayOff does nothing here: the screen goes off by itself, on the
 // system's own timer, once zx lets go of it.
 func displayOff() {}
+
+// goFullscreen does nothing here: press F11 or Alt+Enter in your terminal.
+func goFullscreen() (func(), error) { return func() {}, nil }

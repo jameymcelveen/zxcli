@@ -220,7 +220,8 @@
         "zx caff 2h",
         "zx caff --style bounce",
         "zx caff --screen-off 2m",
-        "zx caff --screen-off 0"
+        "zx caff --screen-off 0",
+        "zx caff --fullscreen=false"
       ]
     },
     {

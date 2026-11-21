@@ -22,12 +22,15 @@ var (
 	rawModeFn    = rawMode
 	termSizeFn   = termSize
 	displayOffFn = displayOff
+	fullscreenFn = goFullscreen
 )
 
 func runCaffeinate(c *core.Context) error {
+	fullscreenHint := ""
 	flags := c.Flags()
 	dur := flags.Duration("for", 0, "stop after this `duration`, such as 90m or 2h (default: until you press Esc)")
 	style := flags.String("style", "rain", "screen saver: rain, stars, bounce or none")
+	fullscreen := flags.Bool("fullscreen", true, "on macOS Terminal and iTerm2, fill the screen while it runs (--fullscreen=false to stay in the window)")
 	screenOff := flags.Duration("screen-off", 10*time.Minute, "turn the screen off after this long without a key press; 0 keeps it on")
 	pos, err := c.Parse(flags)
 	if err != nil {
@@ -96,11 +99,23 @@ func runCaffeinate(c *core.Context) error {
 			waitForQuit(ctx, keys)
 		} else {
 			core.EnableVT(os.Stdout)
+			leaveFull := func() {}
+			if *fullscreen {
+				var ferr error
+				if leaveFull, ferr = fullscreenFn(); ferr != nil {
+					leaveFull = func() {}
+					fullscreenHint = "to go fullscreen, allow your terminal under System Settings > Privacy & Security > Accessibility, then run zx caff again"
+				}
+			}
 			runSaver(ctx, c.Stdout, sv, keys, start, os.Getenv("NO_COLOR") == "", *screenOff, setDisplay)
+			leaveFull()
 		}
 		restore()
 	}
 	c.Printf("awake for %s\n", cafElapsed(time.Since(start)))
+	if fullscreenHint != "" {
+		fmt.Fprintln(c.Stderr, "zx:", fullscreenHint)
+	}
 	return nil
 }
 

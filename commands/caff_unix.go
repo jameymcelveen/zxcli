@@ -3,12 +3,14 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // keepAwake stops the machine from sleeping until release is called. On macOS
@@ -84,4 +86,38 @@ func displayOff() {
 	if runtime.GOOS == "darwin" {
 		_ = exec.Command("pmset", "displaysleepnow").Run()
 	}
+}
+
+// goFullscreen puts the terminal window zx is running in into macOS full
+// screen and returns a func that puts it back. It only knows Terminal and
+// iTerm2, and needs that app to be allowed under Accessibility. A window that
+// is already fullscreen is left alone.
+func goFullscreen() (func(), error) {
+	noop := func() {}
+	if runtime.GOOS != "darwin" {
+		return noop, nil
+	}
+	app := map[string]string{"Apple_Terminal": "Terminal", "iTerm.app": "iTerm2"}[os.Getenv("TERM_PROGRAM")]
+	if app == "" {
+		return noop, nil
+	}
+	attr := `tell application "System Events" to tell process "` + app + `" to `
+	was, err := osa(attr + `get value of attribute "AXFullScreen" of window 1`)
+	if err != nil {
+		return noop, err
+	}
+	if was == "true" {
+		return noop, nil
+	}
+	if _, err := osa(attr + `set value of attribute "AXFullScreen" of window 1 to true`); err != nil {
+		return noop, err
+	}
+	return func() { _, _ = osa(attr + `set value of attribute "AXFullScreen" of window 1 to false`) }, nil
+}
+
+func osa(script string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "osascript", "-e", script).CombinedOutput()
+	return strings.TrimSpace(string(out)), err
 }

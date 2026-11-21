@@ -125,3 +125,12 @@ func TestScreenOffAndAnyKeyWakes(t *testing.T) {
 		t.Fatal("q should stop zx")
 	}
 }
+
+func TestFullscreenIgnoresOtherTerminals(t *testing.T) {
+	t.Setenv("TERM_PROGRAM", "vscode")
+	restore, err := goFullscreen()
+	if err != nil || restore == nil {
+		t.Fatalf("an unknown terminal should be left alone, got %v", err)
+	}
+	restore()
+}
