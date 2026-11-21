@@ -14,7 +14,7 @@ import (
 	"github.com/jameymcelveen/zxcli/core"
 )
 
-func init() { core.Register("caffeinate", runCaffeinate) }
+func init() { core.Register("caff", runCaffeinate) }
 
 // Hooks so tests do not touch the real power settings or the terminal.
 var (
@@ -34,7 +34,7 @@ func runCaffeinate(c *core.Context) error {
 		return err
 	}
 	if len(pos) > 1 {
-		return core.Usagef("zx caffeinate takes at most one duration, such as 2h")
+		return core.Usagef("zx caff takes at most one duration, such as 2h")
 	}
 	if len(pos) == 1 && *dur == 0 {
 		if *dur, err = time.ParseDuration(pos[0]); err != nil || *dur <= 0 {
@@ -51,7 +51,7 @@ func runCaffeinate(c *core.Context) error {
 	}
 	// With nothing drawn there is no reason to hold the screen on.
 	drawing := sv != nil && core.IsTerminal(os.Stdin) && core.IsTerminal(os.Stdout)
-	release, how, err := keepAwakeFn("zx caffeinate", drawing || *screenOff == 0)
+	release, how, err := keepAwakeFn("zx caff", drawing || *screenOff == 0)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func runCaffeinate(c *core.Context) error {
 	// Switching takes the new hold before dropping the old one, so the
 	// machine is never unprotected in between.
 	setDisplay := func(on bool) {
-		r, _, err := keepAwakeFn("zx caffeinate", on)
+		r, _, err := keepAwakeFn("zx caff", on)
 		if err != nil {
 			return
 		}

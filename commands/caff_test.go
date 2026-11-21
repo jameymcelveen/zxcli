@@ -80,7 +80,7 @@ func TestCaffeinateHoldsAndReleases(t *testing.T) {
 	defer func() { keepAwakeFn = keepAwake }()
 	rawModeFn = func() (func(), error) { return func() {}, nil }
 	defer func() { rawModeFn = rawMode }()
-	out, _, err := run(t, "x", "caffeinate", "--for", "50ms")
+	out, _, err := run(t, "x", "caff", "--for", "50ms")
 	if err != nil {
 		t.Fatal(err)
 	}

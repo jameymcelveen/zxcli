@@ -96,7 +96,7 @@ The installers are not code-signed. macOS asks you to confirm the `.pkg` (right-
 | `zx pw` | Strong random passwords with no look-alike characters: `zx pw 32`, `--no-symbols` |
 | `zx lorem` | Placeholder text: `zx lorem 3` paragraphs, `-w 12` words |
 | `zx now` | The time in local, UTC, ISO and epoch form, or convert one: `zx now 1700000000` |
-| `zx caffeinate` | Keep the machine awake with a quiet screen saver; any key wakes it, Esc stops it, the screen goes off after 10 minutes |
+| `zx caff` | Keep the machine awake with a quiet screen saver; any key wakes it, Esc stops it, the screen goes off after 10 minutes |
 | `zx b64` | Base64 encode, or decode with `-d` |
 | `zx url` | URL-encode, decode with `-d`, or take a URL apart with `-p` |
 | `zx case` | Convert naming styles: `zx case snake HelloWorld` |
