@@ -32,8 +32,9 @@ nav{display:flex;align-items:center;gap:20px;padding:18px 0;font-size:14px}
 nav .logo{display:flex;color:var(--text)}nav .logo svg{display:block;height:26px;width:auto}
 nav .sp{flex:1}nav a{color:var(--dim)}nav a:hover{color:var(--text);text-decoration:none}
 .hero{padding:56px 0 36px}
-.catch{font:400 clamp(22px,3.4vw,34px)/1.2 "Uncial Antiqua",Georgia,serif;letter-spacing:.04em;color:var(--amber);background:none;border:0;padding:0;margin:0 0 26px;cursor:pointer;text-align:left;transition:text-shadow .25s,color .25s}
-.catch:hover,.catch:focus-visible{color:#ffc857;text-shadow:0 0 6px #ffb347,0 0 18px #ff9f1c,0 0 38px #ff7a00;outline:none}
+.catch{font:600 clamp(15px,1.9vw,18px)/1.4 var(--mono);letter-spacing:.01em;color:var(--amber);background:none;border:0;padding:0;margin:0 0 22px;cursor:pointer;text-align:left;transition:text-shadow .25s,color .25s}
+.catch:hover,.catch:focus-visible{color:#d98200;text-shadow:0 0 10px rgba(255,150,30,.7),0 0 26px rgba(255,120,0,.4);outline:none}
+@media (prefers-color-scheme:dark){.catch:hover,.catch:focus-visible{color:#ffc857;text-shadow:0 0 6px #ffb347,0 0 18px #ff9f1c,0 0 38px #ff7a00}}
 .veil{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:rgba(6,8,12,.6);-webkit-backdrop-filter:blur(16px) saturate(120%);backdrop-filter:blur(16px) saturate(120%);opacity:0;transition:opacity .3s;cursor:pointer}
 .veil[hidden]{display:none}.veil.show{opacity:1}
 .ringwrap{position:relative;width:min(92vmin,680px);aspect-ratio:1;display:grid;place-items:center}
