@@ -217,8 +217,9 @@
       "examples": [
         "zx caffeinate",
         "zx caffeinate 2h",
-        "zx caffeinate --style rain",
-        "zx caffeinate --display-sleep"
+        "zx caffeinate --style bounce",
+        "zx caffeinate --screen-off 2m",
+        "zx caffeinate --screen-off 0"
       ]
     },
     {

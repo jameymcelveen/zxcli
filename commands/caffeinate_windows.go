@@ -71,3 +71,7 @@ func termSize() (w, h int) {
 	}
 	return 80, 24
 }
+
+// displayOff does nothing here: the screen goes off by itself, on the
+// system's own timer, once zx lets go of it.
+func displayOff() {}

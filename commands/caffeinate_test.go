@@ -1,8 +1,11 @@
 package commands
 
 import (
+	"bytes"
+	"context"
 	"math/rand"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -83,5 +86,42 @@ func TestCaffeinateHoldsAndReleases(t *testing.T) {
 	}
 	if !held || !released || !strings.Contains(out, "awake for") {
 		t.Errorf("held=%v released=%v out=%q", held, released, out)
+	}
+}
+
+func TestScreenOffAndAnyKeyWakes(t *testing.T) {
+	termSizeFn = func() (int, int) { return 20, 5 }
+	defer func() { termSizeFn = termSize }()
+	var calls []bool
+	var mu sync.Mutex
+	set := func(on bool) { mu.Lock(); calls = append(calls, on); mu.Unlock() }
+	get := func() []bool { mu.Lock(); defer mu.Unlock(); return append([]bool(nil), calls...) }
+	keys := make(chan byte, 4)
+	sv, _ := newSaver("stars", rand.New(rand.NewSource(1)))
+	done := make(chan struct{})
+	var out bytes.Buffer
+	go func() {
+		runSaver(context.Background(), &out, sv, keys, time.Now(), false, 300*time.Millisecond, set)
+		close(done)
+	}()
+	time.Sleep(700 * time.Millisecond)
+	if got := get(); len(got) != 1 || got[0] {
+		t.Fatalf("after idle the screen should go off once, got %v", got)
+	}
+	keys <- 'x' // any key wakes
+	time.Sleep(200 * time.Millisecond)
+	if got := get(); len(got) != 2 || !got[1] {
+		t.Fatalf("a key should wake the screen, got %v", got)
+	}
+	select {
+	case <-done:
+		t.Fatal("a plain key must not stop zx")
+	default:
+	}
+	keys <- 'q'
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("q should stop zx")
 	}
 }

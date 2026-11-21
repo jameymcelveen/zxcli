@@ -31,7 +31,11 @@ func keepAwake(why string, display bool) (release func(), how string, err error)
 	if err != nil {
 		return nil, "", fmt.Errorf("zx caffeinate needs systemd-inhibit on this system, and it is not installed")
 	}
-	cmd := exec.Command(path, "--what=idle:sleep", "--who=zx", "--why="+why, "--mode=block", "cat")
+	what := "--what=sleep"
+	if display {
+		what = "--what=idle:sleep"
+	}
+	cmd := exec.Command(path, what, "--who=zx", "--why="+why, "--mode=block", "cat")
 	in, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, "", err
@@ -72,4 +76,12 @@ func termSize() (w, h int) {
 		}
 	}
 	return 80, 24
+}
+
+// displayOff turns the screen off right away where the system lets us. On
+// other systems the screen goes off by itself once zx lets go of it.
+func displayOff() {
+	if runtime.GOOS == "darwin" {
+		_ = exec.Command("pmset", "displaysleepnow").Run()
+	}
 }

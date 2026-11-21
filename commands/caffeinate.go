@@ -18,16 +18,17 @@ func init() { core.Register("caffeinate", runCaffeinate) }
 
 // Hooks so tests do not touch the real power settings or the terminal.
 var (
-	keepAwakeFn = keepAwake
-	rawModeFn   = rawMode
-	termSizeFn  = termSize
+	keepAwakeFn  = keepAwake
+	rawModeFn    = rawMode
+	termSizeFn   = termSize
+	displayOffFn = displayOff
 )
 
 func runCaffeinate(c *core.Context) error {
 	flags := c.Flags()
 	dur := flags.Duration("for", 0, "stop after this `duration`, such as 90m or 2h (default: until you press Esc)")
-	style := flags.String("style", "stars", "screen saver: stars, rain, bounce or none")
-	displaySleep := flags.Bool("display-sleep", false, "let the screen turn off; only keep the machine itself awake")
+	style := flags.String("style", "rain", "screen saver: rain, stars, bounce or none")
+	screenOff := flags.Duration("screen-off", 10*time.Minute, "turn the screen off after this long without a key press; 0 keeps it on")
 	pos, err := c.Parse(flags)
 	if err != nil {
 		return err
@@ -45,11 +46,30 @@ func runCaffeinate(c *core.Context) error {
 		return err
 	}
 
-	release, how, err := keepAwakeFn("zx caffeinate", !*displaySleep)
+	if *screenOff < 0 {
+		return core.Usagef("--screen-off cannot be negative")
+	}
+	// With nothing drawn there is no reason to hold the screen on.
+	drawing := sv != nil && core.IsTerminal(os.Stdin) && core.IsTerminal(os.Stdout)
+	release, how, err := keepAwakeFn("zx caffeinate", drawing || *screenOff == 0)
 	if err != nil {
 		return err
 	}
-	defer release()
+	defer func() { release() }()
+	// Switching takes the new hold before dropping the old one, so the
+	// machine is never unprotected in between.
+	setDisplay := func(on bool) {
+		r, _, err := keepAwakeFn("zx caffeinate", on)
+		if err != nil {
+			return
+		}
+		old := release
+		release = r
+		old()
+		if !on {
+			displayOffFn()
+		}
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -76,7 +96,7 @@ func runCaffeinate(c *core.Context) error {
 			waitForQuit(ctx, keys)
 		} else {
 			core.EnableVT(os.Stdout)
-			runSaver(ctx, c.Stdout, sv, keys, start, os.Getenv("NO_COLOR") == "")
+			runSaver(ctx, c.Stdout, sv, keys, start, os.Getenv("NO_COLOR") == "", *screenOff, setDisplay)
 		}
 		restore()
 	}
@@ -144,19 +164,21 @@ func waitForQuit(ctx context.Context, keys <-chan byte) {
 }
 
 const (
-	screenOn  = "\x1b[?1049h\x1b[?25l\x1b[2J"
-	screenOff = "\x1b[0m\x1b[?25h\x1b[?1049l"
+	altScreenOn  = "\x1b[?1049h\x1b[?25l\x1b[2J"
+	altScreenOff = "\x1b[0m\x1b[?25h\x1b[?1049l"
 )
 
 // runSaver draws on the alternate screen until Esc, q, Ctrl-C or the timeout.
 // Everything on screen keeps moving, and the hint disappears after a few
-// seconds, so nothing sits still long enough to burn in.
-func runSaver(ctx context.Context, out io.Writer, sv saver, keys <-chan byte, start time.Time, color bool) {
-	io.WriteString(out, screenOn)
-	defer io.WriteString(out, screenOff)
+// seconds, so nothing sits still long enough to burn in. After screenOff
+// without a key press the screen is let go of and nothing is drawn; any key
+// brings the saver back, and only Esc, q or Ctrl-C stops zx.
+func runSaver(ctx context.Context, out io.Writer, sv saver, keys <-chan byte, start time.Time, color bool, screenOff time.Duration, setDisplay func(bool)) {
+	io.WriteString(out, altScreenOn)
+	defer io.WriteString(out, altScreenOff)
 	w, h := termSizeFn()
 	g := newGrid(w, h)
-	checked := time.Now()
+	checked, lastKey, off := time.Now(), time.Now(), false
 	tick := time.NewTicker(120 * time.Millisecond)
 	defer tick.Stop()
 	for {
@@ -168,8 +190,24 @@ func runSaver(ctx context.Context, out io.Writer, sv saver, keys <-chan byte, st
 				keys = nil
 			} else if quitKey(b, keys) {
 				return
+			} else {
+				lastKey = time.Now()
+				if off {
+					off = false
+					setDisplay(true)
+					io.WriteString(out, "\x1b[2J")
+				}
 			}
 		case <-tick.C:
+			if off {
+				continue
+			}
+			if screenOff > 0 && time.Since(lastKey) >= screenOff {
+				off = true
+				io.WriteString(out, "\x1b[2J")
+				setDisplay(false)
+				continue
+			}
 			if time.Since(checked) > time.Second {
 				checked = time.Now()
 				if nw, nh := termSizeFn(); nw != w || nh != h {
@@ -181,7 +219,7 @@ func runSaver(ctx context.Context, out io.Writer, sv saver, keys <-chan byte, st
 			g.clear()
 			elapsed := time.Since(start)
 			sv.step(g, elapsed)
-			if elapsed < 6*time.Second {
+			if time.Since(lastKey) < 6*time.Second {
 				msg := " Esc to stop "
 				g.text((g.w-len(msg))/2, g.h-1, msg, 250)
 			}
